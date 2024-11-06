@@ -9,6 +9,8 @@ import studio from '@theatre/studio'
 import { getProject, ISheet, types } from '@theatre/core'
 import { RenderPass } from './renderPasses/RenderPass';
 
+export const loadingManager = new THREE.LoadingManager();
+
 export const start = async (canvas: HTMLCanvasElement) => {
   studio.initialize();
   const project = getProject("demo project");
@@ -17,7 +19,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const stats = setupStats();
 
   const renderer = setupRenderer(canvas);
-  const scene = createScene();
+  const scene = createScene(loadingManager);
   const camera = setupCamera();
   const clock = new THREE.Clock();
   const controls = setupControls(camera, renderer);
@@ -149,7 +151,7 @@ const setupControls = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRen
 }
 
 const loadEquirect = async () => {
-  const texture = await new Promise<THREE.Texture>((resolve) => new RGBELoader().load('belfast_sunset_puresky_2k.hdr', (texture) => {
+  const texture = await new Promise<THREE.Texture>((resolve) => new RGBELoader(loadingManager).load('belfast_sunset_puresky_2k.hdr', (texture) => {
     resolve(texture)
   }));
   
@@ -182,7 +184,7 @@ const connectPassToTheatre = (pass: RenderPass, sheet: ISheet) => {
     ...colorValues,
   }
 
-  const obj = sheet.object(pass.name, props);
+  const obj = sheet.object(pass.name || "RenderPass" , props);
 
   obj.onValuesChange((values) => {
     Object.entries(values).forEach(([k, value]) => {

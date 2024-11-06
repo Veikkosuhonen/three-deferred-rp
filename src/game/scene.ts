@@ -2,10 +2,10 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { gBufferShaderVariants, getVariantKey } from './shaders/gbuffer';
 
-export const createScene = () => {
+export const createScene = (loadingManager: THREE.LoadingManager) => {
   const scene = new THREE.Scene()
 
-  const gltfLoader = new GLTFLoader();
+  const gltfLoader = new GLTFLoader(loadingManager);
 
   gltfLoader.load("cliff/cliffscene.gltf", (gltf) => {
     const root = gltf.scene;
