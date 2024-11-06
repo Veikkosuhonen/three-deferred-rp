@@ -1,20 +1,21 @@
 import * as THREE from "three";
-import { Pass, FullScreenQuad } from "three/examples/jsm/Addons.js";
-import { lightningShader, blur4xShader, ssaoShader, finalShader } from "./shaders";
-import { skyShader } from "./shaders/sky";
-import { thresholdShader } from "./shaders/threshold";
-import { copyShader } from "./shaders/copy";
-import { bloomMixShader, downsampleShader, upsampleShader } from "./shaders/bloom";
+import { FullScreenQuad } from "three/examples/jsm/Addons.js";
+import { lightningShader, blur4xShader, ssaoShader, finalShader } from "../shaders";
+import { skyShader } from "../shaders/sky";
+import { thresholdShader } from "../shaders/threshold";
+import { copyShader } from "../shaders/copy";
+import { bloomMixShader, downsampleShader, upsampleShader } from "../shaders/bloom";
+import { RenderPass } from "./RenderPass";
 
 const fsQuad = new FullScreenQuad();
 
-export class GBufferPass extends Pass {
+export class GBufferPass extends RenderPass {
   scene: THREE.Scene;
   camera: THREE.Camera;
   gBuffer: THREE.WebGLRenderTarget;
 
   constructor(scene: THREE.Scene, camera: THREE.Camera, gBuffer: THREE.WebGLRenderTarget) {
-    super();
+    super("GBufferPass");
 		this.scene = scene;
 		this.camera = camera;
     this.gBuffer = gBuffer;
@@ -28,7 +29,7 @@ export class GBufferPass extends Pass {
   }
 }
 
-export class SSAOPass extends Pass {
+export class SSAOPass extends RenderPass {
   gBuffer: THREE.WebGLRenderTarget;
   ssaoBuffer: THREE.WebGLRenderTarget;
   ssaoBuffer2: THREE.WebGLRenderTarget;
@@ -39,7 +40,7 @@ export class SSAOPass extends Pass {
   SCALE = 1;
 
   constructor(gBuffer: THREE.WebGLRenderTarget, camera: THREE.Camera) {
-    super();
+    super("SSAOPass");
     this.gBuffer = gBuffer;
     this.ssaoBuffer = new THREE.WebGLRenderTarget(window.innerWidth * this.SCALE, window.innerHeight * this.SCALE, {
       format: THREE.RedFormat,
@@ -116,14 +117,14 @@ export class SSAOPass extends Pass {
   }
 }
 
-export class LightVolumePass extends Pass {
+export class LightVolumePass extends RenderPass {
   scene: THREE.Scene;
   camera: THREE.Camera;
   gBuffer: THREE.WebGLRenderTarget;
   lightVolume: THREE.Mesh;
 
   constructor(scene: THREE.Scene, camera: THREE.Camera, gBuffer: THREE.WebGLRenderTarget) {
-    super();
+    super("LightVolumePass");
     this.scene = scene;
     this.camera = camera;
     this.gBuffer = gBuffer;
@@ -166,7 +167,7 @@ export class LightVolumePass extends Pass {
   }
 }
 
-export class FinalLightPass extends Pass {
+export class FinalLightPass extends RenderPass {
   scene: THREE.Scene;
   camera: THREE.Camera;
   gBuffer: THREE.WebGLRenderTarget;
@@ -178,7 +179,7 @@ export class FinalLightPass extends Pass {
     ssaoTexture: THREE.Texture, 
     irradianceMap: THREE.Texture
   ) {
-    super();
+    super("FinalLightPass");
     this.scene = scene;
     this.camera = camera;
     this.gBuffer = gBuffer;
@@ -209,7 +210,7 @@ export class FinalLightPass extends Pass {
   }
 }
 
-export class SkyPass extends Pass {
+export class SkyPass extends RenderPass {
   camera: THREE.Camera;
   exposure: number;
   gamma: number;
@@ -218,7 +219,7 @@ export class SkyPass extends Pass {
     envMap: THREE.CubeTexture,
     camera: THREE.PerspectiveCamera
   ) {
-    super();
+    super("SkyPass");
     this.needsSwap = false;
     skyShader.uniforms.envMap.value = envMap;
     this.camera = camera;
@@ -240,13 +241,13 @@ export class SkyPass extends Pass {
   }
 }
 
-export class BloomPass extends Pass {
+export class BloomPass extends RenderPass {
   colorBuffers: THREE.WebGLRenderTarget[];
   bloomStrength;
   filterRadius;
 
   constructor(bloomStrength: number, filterRadius: number) {
-    super();
+    super("BloomPass");
     this.bloomStrength = bloomStrength;
     this.filterRadius = filterRadius;
     this.colorBuffers = [];

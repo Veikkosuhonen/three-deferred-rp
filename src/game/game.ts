@@ -2,11 +2,12 @@ import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { createScene } from './scene';
 import { EffectComposer, Pass } from 'three/addons/postprocessing/EffectComposer.js';
-import { BloomPass, FinalLightPass, GBufferPass, LightVolumePass, SkyPass, SSAOPass } from './passes';
+import { BloomPass, FinalLightPass, GBufferPass, LightVolumePass, SkyPass, SSAOPass } from './renderPasses/passes';
 import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader } from 'three/examples/jsm/Addons.js';
 import { cubeToIrradiance, equirectToCube } from './equirectToCube';
 import studio from '@theatre/studio'
 import { getProject, ISheet, types } from '@theatre/core'
+import { RenderPass } from './renderPasses/RenderPass';
 
 export const start = async (canvas: HTMLCanvasElement) => {
   studio.initialize();
@@ -37,7 +38,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
   composer.addPass(new BloomPass(0.1, 0.005));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
-  composer.passes.forEach((pass) => connectPassToTheatre(pass, sheet));
+  composer.passes.forEach((pass) => connectPassToTheatre(pass as RenderPass, sheet));
 
   const animate = () => {
     stats.begin();
@@ -163,7 +164,7 @@ const setupStats = () => {
   return stats;
 }
 
-const connectPassToTheatre = (pass: Pass, sheet: ISheet) => {
+const connectPassToTheatre = (pass: RenderPass, sheet: ISheet) => {
   const numberValues = Object.fromEntries(
     Object.entries(pass)
     .filter(([k, v]) => typeof v === 'number')
@@ -181,8 +182,7 @@ const connectPassToTheatre = (pass: Pass, sheet: ISheet) => {
     ...colorValues,
   }
 
-  const obj = sheet.object(pass.constructor.name, props);
-  console.log(obj.props)
+  const obj = sheet.object(pass.name, props);
 
   obj.onValuesChange((values) => {
     Object.entries(values).forEach(([k, value]) => {
