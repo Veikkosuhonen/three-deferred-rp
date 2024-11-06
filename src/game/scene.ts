@@ -1,22 +1,28 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { gBufferShaderVariants, getVariantKey } from './shaders/gbuffer';
+import { ISheet } from '@theatre/core';
+import { connectObjectToTheatre } from './theatreThree';
 
-export const createScene = (loadingManager: THREE.LoadingManager) => {
+export const createScene = (loadingManager: THREE.LoadingManager, sheet: ISheet) => {
   const scene = new THREE.Scene()
 
   const gltfLoader = new GLTFLoader(loadingManager);
 
   gltfLoader.load("cliff/cliffscene.gltf", (gltf) => {
     const root = gltf.scene;
-    root.traverse(configureSceneObjects)
+    root.traverse((obj) => configureSceneObjects(obj, sheet))
     scene.add(root);
   });
 
   return scene;
 }
 
-const configureSceneObjects = (object: THREE.Object3D) => {
+const configureSceneObjects = (object: THREE.Object3D, sheet: ISheet) => {
+  if ("t_id" in object.userData) {
+    connectObjectToTheatre(object, sheet);
+  }
+
   if (object instanceof THREE.Mesh) {
     
     if (object.material instanceof THREE.MeshPhysicalMaterial) {
@@ -45,6 +51,9 @@ const configureSceneObjects = (object: THREE.Object3D) => {
   }
 
   if (object instanceof THREE.Light) {
-    // console.log(object.name, object)
+    if (object instanceof THREE.PointLight) {
+      object.distance = object.intensity;
+      console.log(object.name, object)
+    }
   }
 }

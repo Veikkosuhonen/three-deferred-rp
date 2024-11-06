@@ -8,6 +8,7 @@ import { cubeToIrradiance, equirectToCube } from './equirectToCube';
 import studio from '@theatre/studio'
 import { getProject, ISheet, types } from '@theatre/core'
 import { RenderPass } from './renderPasses/RenderPass';
+import { connectPassToTheatre } from './theatreThree';
 
 export const loadingManager = new THREE.LoadingManager();
 
@@ -19,7 +20,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const stats = setupStats();
 
   const renderer = setupRenderer(canvas);
-  const scene = createScene(loadingManager);
+  const scene = createScene(loadingManager, sheet);
   const camera = setupCamera();
   const clock = new THREE.Clock();
   const controls = setupControls(camera, renderer);
@@ -164,37 +165,4 @@ const setupStats = () => {
   stats.dom.style.top = "90vh";
   document.body.appendChild(stats.dom);
   return stats;
-}
-
-const connectPassToTheatre = (pass: RenderPass, sheet: ISheet) => {
-  const numberValues = Object.fromEntries(
-    Object.entries(pass)
-    .filter(([k, v]) => typeof v === 'number')
-    .map(([key, value]) => [key, types.number(value as number, { nudgeMultiplier: value as number * 0.05 })])
-  );
-
-  const colorValues = Object.fromEntries(
-    Object.entries(pass)
-    .filter(([k, v]) => v instanceof THREE.Color)
-    .map(([key, value]) => [key, types.rgba({ r: value.r, g: value.g, b: value.b, a: 1.0 })])
-  );
-
-  const props = {
-    ...numberValues,
-    ...colorValues,
-  }
-
-  const obj = sheet.object(pass.name || "RenderPass" , props);
-
-  obj.onValuesChange((values) => {
-    Object.entries(values).forEach(([k, value]) => {
-      const key = k as keyof Pass;
-      if (typeof value === 'number') {
-        // @ts-ignore
-        pass[key] = value;
-      } else if (value) {
-        (pass[key] as any as THREE.Color).set(value.r, value.g, value.b);
-      }
-    });
-  });
 }
