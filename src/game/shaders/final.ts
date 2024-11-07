@@ -51,7 +51,7 @@ void main() {
   vec3 diffuse = albedo * irradiance;
   vec3 ambient    = (kD * diffuse + u_constantAmbientLight) * ssao.r;
 
-  vec3 outColor = color + ambient + emission.rgb * 200.0;
+  vec3 outColor = color + ambient + emission.rgb;
 
   fragColor = vec4(outColor, 1.0);
 }

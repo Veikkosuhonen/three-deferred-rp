@@ -1,0 +1,137 @@
+{
+  "sheetsById": {
+    "demo sheet": {
+      "staticOverrides": {
+        "byObject": {
+          "BloomPass": {
+            "bloomStrength": 0.2,
+            "filterRadius": 0.0049999999999999906
+          },
+          "SSAOPass": {
+            "scale": 1
+          },
+          "FinalLightPass": {
+            "irradianceIntensity": 0.8499999999999668,
+            "constantAmbientLight": {
+              "r": 0.0392156862745098,
+              "g": 0.0392156862745098,
+              "b": 0.0392156862745098,
+              "a": 1
+            }
+          },
+          "SkyPass": {
+            "exposure": 0.29499999999999993,
+            "gamma": 2.090000000000001
+          },
+          "Car": {
+            "position": {
+              "x": -13.44033145904541,
+              "y": 0.9764564037322998,
+              "z": 10.491519927978516
+            },
+            "rotation": {
+              "x": -90,
+              "y": 0,
+              "z": 0
+            }
+          }
+        }
+      },
+      "sequence": {
+        "subUnitsPerUnit": 30,
+        "length": 10,
+        "type": "PositionalSequence",
+        "tracksByObject": {
+          "BloomPass": {
+            "trackData": {
+              "uqZnrW3pl5": {
+                "type": "BasicKeyframedTrack",
+                "__debugName": "BloomPass:[\"bloomStrength\"]",
+                "keyframes": [
+                  {
+                    "id": "gNGNezlSJL",
+                    "position": -0.2,
+                    "connectedRight": true,
+                    "handles": [
+                      0.5,
+                      1,
+                      0.5,
+                      0
+                    ],
+                    "type": "bezier",
+                    "value": 0.01999999999999984
+                  },
+                  {
+                    "id": "NhTcthLxSI",
+                    "position": 0,
+                    "connectedRight": true,
+                    "handles": [
+                      0.5,
+                      1,
+                      0.5,
+                      0
+                    ],
+                    "type": "bezier",
+                    "value": 0.05
+                  }
+                ]
+              }
+            },
+            "trackIdByPropPath": {
+              "[\"bloomStrength\"]": "uqZnrW3pl5"
+            }
+          },
+          "Car": {
+            "trackData": {
+              "j1tyTSsk-b": {
+                "type": "BasicKeyframedTrack",
+                "__debugName": "Car:[\"position\",\"x\"]",
+                "keyframes": []
+              },
+              "y2YLy7HG4-": {
+                "type": "BasicKeyframedTrack",
+                "__debugName": "Car:[\"position\",\"y\"]",
+                "keyframes": [
+                  {
+                    "id": "ZB_UfbeRRU",
+                    "position": 0,
+                    "connectedRight": true,
+                    "handles": [
+                      0.5,
+                      1,
+                      0.5,
+                      0
+                    ],
+                    "type": "bezier",
+                    "value": 1
+                  }
+                ]
+              },
+              "50G_Pz7Zsc": {
+                "type": "BasicKeyframedTrack",
+                "__debugName": "Car:[\"position\",\"z\"]",
+                "keyframes": []
+              },
+              "sEq_CiqBS4": {
+                "type": "BasicKeyframedTrack",
+                "__debugName": "Car:[\"rotation\",\"z\"]",
+                "keyframes": []
+              }
+            },
+            "trackIdByPropPath": {
+              "[\"position\",\"x\"]": "j1tyTSsk-b",
+              "[\"position\",\"y\"]": "y2YLy7HG4-",
+              "[\"position\",\"z\"]": "50G_Pz7Zsc",
+              "[\"rotation\",\"z\"]": "sEq_CiqBS4"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitionVersion": "0.4.0",
+  "revisionHistory": [
+    "_64rDU1dJNpyJN43",
+    "6n0lwJhFHApAZqGt"
+  ]
+}

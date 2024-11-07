@@ -9,18 +9,23 @@ import studio from '@theatre/studio'
 import { getProject, ISheet, types } from '@theatre/core'
 import { RenderPass } from './renderPasses/RenderPass';
 import { connectPassToTheatre } from './theatreThree';
+import { Game } from './gameState';
+import { createLines } from './lineRenderer';
+import theatreProject from "./demo project.theatre-project-state.json";
 
 export const loadingManager = new THREE.LoadingManager();
 
 export const start = async (canvas: HTMLCanvasElement) => {
   studio.initialize();
-  const project = getProject("demo project");
+  const project = getProject("demo project", { state: theatreProject });
   const sheet = project.sheet("demo sheet");
+  const game = new Game(await import("@dimforge/rapier3d"), sheet, loadingManager);
 
   const stats = setupStats();
 
   const renderer = setupRenderer(canvas);
-  const scene = createScene(loadingManager, sheet);
+  const scene = createScene(game);
+  const debugLines = createLines();
   const camera = setupCamera();
   const clock = new THREE.Clock();
   const controls = setupControls(camera, renderer);
@@ -46,7 +51,10 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const animate = () => {
     stats.begin();
     controls.update(clock.getDelta());
+    game.world.step();
     composer.render();
+    debugLines.updateFromBuffer(game.world.debugRender())
+    renderer.render(debugLines.lines, camera);
     stats.end();
     requestAnimationFrame(animate);
   }
@@ -123,6 +131,7 @@ const setupComposer = (renderer: THREE.WebGLRenderer, depthStencilTexture: THREE
     stencilBuffer: true,
     depthBuffer: true,
     depthTexture: depthStencilTexture,
+    type: THREE.FloatType,
   })
   const composer = new EffectComposer(renderer, rt);
   return composer;
