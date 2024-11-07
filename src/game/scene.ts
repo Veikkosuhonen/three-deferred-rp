@@ -4,7 +4,7 @@ import { gBufferShaderVariants, getVariantKey } from './shaders/gbuffer';
 import { ISheet } from '@theatre/core';
 import { connectObjectToTheatre } from './theatreThree';
 import { Game } from './gameState';
-import type RAPIER from '@dimforge/rapier3d';
+import RAPIER from "@dimforge/rapier3d";
 
 export const createScene = (game: Game) => {
   const scene = new THREE.Scene()
@@ -26,7 +26,7 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
   }
 
   if ("mass" in object.userData) {
-    const desc = game.RAPIER.RigidBodyDesc.dynamic();
+    const desc = RAPIER.RigidBodyDesc.dynamic();
     desc.setTranslation(object.position.x, object.position.y, object.position.z);
     desc.setRotation(object.quaternion);
 
@@ -35,7 +35,7 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
     object.userData.body = body;
     object.userData.isDynamic = true;
   } else {
-    const desc = game.RAPIER.RigidBodyDesc.fixed();
+    const desc = RAPIER.RigidBodyDesc.fixed();
     desc.setTranslation(object.position.x, object.position.y, object.position.z);
     desc.setRotation(object.quaternion);
 
@@ -81,9 +81,9 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
       for (let i = 0; i < indexData.length; i++) {
         indices[i] = indexData[i];
       }
-      colliderDesc = game.RAPIER.ColliderDesc.trimesh(points, indices);
+      colliderDesc = RAPIER.ColliderDesc.trimesh(points, indices);
     } else {
-      colliderDesc = game.RAPIER.ColliderDesc.convexHull(points);
+      colliderDesc = RAPIER.ColliderDesc.convexHull(points);
     }
 
     if (!colliderDesc) {
@@ -95,7 +95,7 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
 
   if ("sphere_collider" in object.userData) {
     const scale = object.scale.x;
-    const colliderDesc = game.RAPIER.ColliderDesc.ball(scale);
+    const colliderDesc = RAPIER.ColliderDesc.ball(scale);
     
     object.userData.collider = game.world.createCollider(colliderDesc, object.userData.body);
   }

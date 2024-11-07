@@ -19,7 +19,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
   studio.initialize();
   const project = getProject("demo project", { state: theatreProject });
   const sheet = project.sheet("demo sheet");
-  const game = new Game(await import("@dimforge/rapier3d"), sheet, loadingManager);
+  const game = new Game(sheet, loadingManager);
 
   const stats = setupStats();
 
