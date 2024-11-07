@@ -149,9 +149,8 @@ const setupCamera = () => {
     Math.tan(fowY) / 2.0
   );
 
-  camera.position.x = -18.052873910199146;
-  camera.position.y = 0.8102733201729349;
-  camera.position.z = 11.14622732715495;
+  camera.position.set(13.398401312195872, 18.947478880398908, 25.249685430173333);
+
   return camera;
 }
 
