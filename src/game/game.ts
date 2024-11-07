@@ -14,11 +14,14 @@ import { createLines } from './lineRenderer';
 import theatreProject from "./demo project.theatre-project-state.json";
 
 export const loadingManager = new THREE.LoadingManager();
+export let onLoaded: () => void;
 
 export const start = async (canvas: HTMLCanvasElement) => {
   studio.initialize();
   const project = getProject("demo project", { state: theatreProject });
   const sheet = project.sheet("demo sheet");
+  onLoaded = () => sheet.sequence.play({ iterationCount: Infinity, rate: 1.5 });
+
   const game = new Game(sheet, loadingManager);
 
   const stats = setupStats();
@@ -138,7 +141,7 @@ const setupComposer = (renderer: THREE.WebGLRenderer, depthStencilTexture: THREE
 }
 
 const setupCamera = () => {
-  const fowY = 70;
+  const fowY = 60;
   const aspect = window.innerWidth / window.innerHeight;
   const near = 0.1;
   const far = 1000;
@@ -149,7 +152,7 @@ const setupCamera = () => {
     Math.tan(fowY) / 2.0
   );
 
-  camera.position.set(13.398401312195872, 18.947478880398908, 25.249685430173333);
+  camera.position.set(26.498286733354398, 16.81716069551973, 13.82369828615056);
 
   return camera;
 }

@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { loadingManager, start } from "./game";
+import { loadingManager, onLoaded, start } from "./game";
 
 export default function Container() {
   let canvas: HTMLCanvasElement|undefined;
@@ -27,6 +27,7 @@ export default function Container() {
       setTimeout(() => {
         setShowLoading(false);
       }, 2000);
+      onLoaded();
     }
     
     start(canvas);
