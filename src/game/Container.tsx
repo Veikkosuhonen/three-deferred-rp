@@ -36,6 +36,12 @@ export default function Container() {
   return (
     <main>
       <canvas ref={canvas} width="800" height="600"></canvas>
+      <a 
+        href="https://github.com/Veikkosuhonen/three-deferred-rp"
+        class="absolute top-0 left-[45vw] underline cursor-pointer text-slate-400"
+      >
+        Source code
+      </a>
       <Show when={showLoading()}>
         <div class="absolute top-[40vh] w-[100vw] flex">
           <div class="mx-auto transition-opacity duration-1000" style={{
