@@ -171,20 +171,22 @@ export class FinalLightPass extends RenderPass {
   scene: THREE.Scene;
   camera: THREE.Camera;
   gBuffer: THREE.WebGLRenderTarget;
-  constantAmbientLight: THREE.Color;
-  irradianceIntensity: number;
+  constantAmbientLight: THREE.Color = new THREE.Color(0.1, 0.1, 0.1);
+  irradianceIntensity: number = 1.0;
+  iblGamma: number = 2.2;
+  iblExposure: number = 1.0;
 
   constructor(scene: THREE.Scene, camera: THREE.Camera, 
     gBuffer: THREE.WebGLRenderTarget, 
     ssaoTexture: THREE.Texture, 
-    irradianceMap: THREE.Texture
+    irradianceMap: THREE.Texture,
+    prefilteredMap: THREE.Texture,
+    brdfLUT: THREE.Texture
   ) {
     super("FinalLightPass");
     this.scene = scene;
     this.camera = camera;
     this.gBuffer = gBuffer;
-    this.constantAmbientLight = new THREE.Color(0, 0, 0);
-    this.irradianceIntensity = 1.0;
   
     finalShader.uniforms.gColorAo.value = this.gBuffer.textures[0];
     finalShader.uniforms.gNormalRoughness.value = this.gBuffer.textures[1];
@@ -192,6 +194,8 @@ export class FinalLightPass extends RenderPass {
     finalShader.uniforms.ssaoTexture.value = ssaoTexture;
     finalShader.uniforms.gEmission.value = this.gBuffer.textures[3];
     finalShader.uniforms.irradianceMap.value = irradianceMap;
+    finalShader.uniforms.prefilterMap.value = prefilteredMap;
+    finalShader.uniforms.brdfLUT.value = brdfLUT;
   }
 
   render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
@@ -204,6 +208,8 @@ export class FinalLightPass extends RenderPass {
 
     finalShader.uniforms.u_constantAmbientLight.value.copy(this.constantAmbientLight);
     finalShader.uniforms.u_irradianceIntensity.value = this.irradianceIntensity
+    finalShader.uniforms.exposure.value = this.iblExposure;
+    finalShader.uniforms.gamma.value = this.iblGamma;
 
     fsQuad.material = finalShader;
     fsQuad.render(renderer);
@@ -303,6 +309,24 @@ export class BloomPass extends RenderPass {
     bloomMixShader.uniforms.bloom.value = this.colorBuffers[0].texture;
     bloomMixShader.uniforms.u_resolution.value.set(writeBuffer.width, writeBuffer.height);
     bloomMixShader.uniforms.bloomStrength.value = this.bloomStrength;
+    fsQuad.render(renderer);
+  }
+}
+
+export class DebugPass extends RenderPass {
+  texture: THREE.Texture;
+
+  constructor(texture: THREE.Texture) {
+    super("DebugPass");
+    this.texture = texture;
+  }
+
+  render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget, deltaTime: number, maskActive: boolean): void {
+    renderer.setRenderTarget(writeBuffer);
+    renderer.clear(true, true, true);
+    copyShader.uniforms.inputTexture.value = this.texture;
+    copyShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+    fsQuad.material = copyShader;
     fsQuad.render(renderer);
   }
 }

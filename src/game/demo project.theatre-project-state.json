@@ -17,7 +17,9 @@
               "g": 0.011764705882352941,
               "b": 0.011764705882352941,
               "a": 1
-            }
+            },
+            "iblExposure": 0.2699999999999999,
+            "iblGamma": 2.310000000000001
           },
           "SkyPass": {
             "exposure": 0.2699999999999999,
@@ -316,6 +318,7 @@
   },
   "definitionVersion": "0.4.0",
   "revisionHistory": [
+    "BtfddIgmyZnW7ZdR",
     "LrI5BrVcJ4McNU0A",
     "CuGzrOPPOzclaUd7",
     "_64rDU1dJNpyJN43",

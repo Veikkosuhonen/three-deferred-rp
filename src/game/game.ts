@@ -2,9 +2,9 @@ import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { createScene } from './scene';
 import { EffectComposer, Pass } from 'three/addons/postprocessing/EffectComposer.js';
-import { BloomPass, FinalLightPass, GBufferPass, LightVolumePass, SkyPass, SSAOPass } from './renderPasses/passes';
+import { BloomPass, DebugPass, FinalLightPass, GBufferPass, LightVolumePass, SkyPass, SSAOPass } from './renderPasses/passes';
 import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader } from 'three/examples/jsm/Addons.js';
-import { cubeToIrradiance, equirectToCube } from './equirectToCube';
+import { cubeToIrradiance, equirectToCube, equirectToPrefilter, generateBrdfLUT } from './envMaps';
 import studio from '@theatre/studio'
 import { getProject, ISheet, types } from '@theatre/core'
 import { RenderPass } from './renderPasses/RenderPass';
@@ -37,6 +37,8 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const equirect = await loadEquirect();
   const cubeMap = equirectToCube(renderer, equirect, 1024);
   const irradianceMap = cubeToIrradiance(renderer, cubeMap.texture, 256);
+  const prefilteredMap = equirectToPrefilter(renderer, equirect);
+  const brdfLUT = generateBrdfLUT(renderer);
 
   const composer = setupComposer(renderer, depthStencilTexture);
   composer.addPass(new GBufferPass(scene, camera, gBuffer));
@@ -44,9 +46,10 @@ export const start = async (canvas: HTMLCanvasElement) => {
   composer.addPass(ssaoPass);
   const lightingPass = new LightVolumePass(scene, camera, gBuffer);
   composer.addPass(lightingPass);
-  composer.addPass(new FinalLightPass(scene, camera, gBuffer, ssaoPass.ssaoBuffer.texture, irradianceMap.texture));
+  composer.addPass(new FinalLightPass(scene, camera, gBuffer, ssaoPass.ssaoBuffer.texture, irradianceMap.texture, prefilteredMap.texture, brdfLUT));
   composer.addPass(new SkyPass(cubeMap.texture, camera));
   composer.addPass(new BloomPass(0.1, 0.005));
+  // composer.addPass(new DebugPass(prefilteredMap.texture));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
   composer.passes.forEach((pass) => connectPassToTheatre(pass as RenderPass, sheet));

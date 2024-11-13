@@ -1,8 +1,8 @@
 function generateCubeUVSize(imageHeight: number) {
-	const maxMip = Math.log2( imageHeight ) - 2;
-	const texelHeight = 1.0 / imageHeight;
-	const texelWidth = 1.0 / ( 3 * Math.max( Math.pow( 2, maxMip ), 7 * 16 ) );
-	return { texelWidth, texelHeight, maxMip };
+  const maxMip = Math.log2( imageHeight ) - 2;
+  const texelHeight = 1.0 / imageHeight;
+  const texelWidth = 1.0 / ( 3 * Math.max( Math.pow( 2, maxMip ), 7 * 16 ) );
+  return { texelWidth, texelHeight, maxMip };
 }
 
 export function cubeUVDefines(imageHeight: number) {
@@ -19,7 +19,7 @@ export function cubeUVDefines(imageHeight: number) {
  */
 export const pmrem = /* glsl */ `
 
-${cubeUVDefines(8192)}
+${cubeUVDefines(2048)}
 #define cubeUV_minMipLevel 4.0
 #define cubeUV_minTileSize 16.0
 
