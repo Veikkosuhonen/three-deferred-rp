@@ -4,7 +4,7 @@ import { screenVS } from "./screenVS";
 const gauss9xBlurFS = /* glsl */ `
 precision highp float;
 
-uniform sampler2D inputTexture;
+uniform sampler2D src;
 
 uniform vec2 u_resolution;
 
@@ -30,7 +30,7 @@ void main() {
   vec4 color = vec4(0.0);
   for (int i = 0; i <= 9; i++) {
     vec2 offset = u_blurDirection * vec2(float(i - 4)) * texelSize;
-    color += texture(inputTexture, uv + offset) * gaussian_9[i];
+    color += texture(src, uv + offset) * gaussian_9[i];
   }
   color /= 9.0;
 
@@ -41,7 +41,7 @@ void main() {
 const blur4xFS = /* glsl */ `
 precision highp float;
 
-uniform sampler2D inputTexture;
+uniform sampler2D src;
 
 uniform vec2 u_resolution;
 
@@ -54,7 +54,7 @@ void main() {
   for (int i = -1; i <= 1; i++) {
     for (int j = -1; j <= 1; j++) {
       vec2 offset = vec2(float(i), float(j)) * texelSize;
-      color += texture(inputTexture, uv + offset);
+      color += texture(src, uv + offset);
     }
   }
   color /= 9.0;
@@ -69,7 +69,7 @@ export const gauss9xBlurShader = new THREE.RawShaderMaterial({
   side: THREE.FrontSide,
   glslVersion: "300 es",
   uniforms: {
-    inputTexture: { value: null },
+    src: { value: null },
     u_resolution: { value: new THREE.Vector2() },
     u_blurDirection: { value: new THREE.Vector2() },
   },
@@ -81,7 +81,7 @@ export const blur4xShader = new THREE.RawShaderMaterial({
   side: THREE.FrontSide,
   glslVersion: "300 es",
   uniforms: {
-    inputTexture: { value: null },
+    src: { value: null },
     u_resolution: { value: new THREE.Vector2() },
   },
 });

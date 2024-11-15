@@ -14,6 +14,7 @@ uniform sampler2D gEmission;
 uniform samplerCube irradianceMap;
 uniform sampler2D prefilterMap;
 uniform sampler2D brdfLUT;
+uniform sampler2D ssrTexture;
 
 uniform vec2 u_resolution;
 uniform vec3 u_constantAmbientLight;
@@ -45,7 +46,7 @@ void main() {
   vec4 positionMetalness = texture(gPositionMetalness, uv);
   float metalness = positionMetalness.w;
   float roughness = normalRoughness.w;
-  
+  vec4 ssr = texture(ssrTexture, uv);
 
   vec4 ssao = texture(ssaoTexture, uv);
   vec4 emission = texture(gEmission, uv);
@@ -68,9 +69,15 @@ void main() {
   vec3 irradiance = texture(irradianceMap, normalWS).rgb * u_irradianceIntensity;
 
   vec3 reflectionWS = (inverseViewMatrix * vec4(R, 0.0)).xyz;
-  vec3 prefilteredColor = gammaExposureCorrect(textureCubeUV(prefilterMap, reflectionWS, roughness).rgb);
+  vec3 reflectionColor = mix(
+    gammaExposureCorrect(
+      textureCubeUV(prefilterMap, reflectionWS, roughness).rgb
+    ),
+    ssr.rgb,
+    ssr.a
+  );
   vec2 envBRDF = texture(brdfLUT, vec2(NdotV, roughness)).rg;
-  vec3 specular = prefilteredColor * (kS * envBRDF.x + envBRDF.y);
+  vec3 specular = reflectionColor * (kS * envBRDF.x + envBRDF.y);
 
   vec3 diffuse = albedo * irradiance;
   vec3 ambient    = (kD * diffuse + specular + u_constantAmbientLight) * ssao.r;
@@ -107,6 +114,7 @@ export const finalShader = new THREE.RawShaderMaterial({
     irradianceMap: { value: null },
     prefilterMap: { value: null },
     brdfLUT: { value: null },
+    ssrTexture: { value: null },
     inverseViewMatrix: { value: new THREE.Matrix4() },
     u_constantAmbientLight: { value: new THREE.Color() },
     u_resolution: { value: new THREE.Vector2() },

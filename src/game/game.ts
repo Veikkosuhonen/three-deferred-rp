@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { createScene } from './scene';
 import { EffectComposer, Pass } from 'three/addons/postprocessing/EffectComposer.js';
-import { BloomPass, DebugPass, FinalLightPass, GBufferPass, LightVolumePass, SkyPass, SSAOPass } from './renderPasses/passes';
+import { BloomPass, DebugPass, FinalLightPass, GBufferPass, LightVolumePass, SavePass, SkyPass, SSAOPass, SSRPass } from './renderPasses/passes';
 import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader } from 'three/examples/jsm/Addons.js';
 import { cubeToIrradiance, equirectToCube, equirectToPrefilter, generateBrdfLUT } from './envMaps';
 import studio from '@theatre/studio'
@@ -41,15 +41,32 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const brdfLUT = generateBrdfLUT(renderer);
 
   const composer = setupComposer(renderer, depthStencilTexture);
+
   composer.addPass(new GBufferPass(scene, camera, gBuffer));
+
   const ssaoPass = new SSAOPass(gBuffer, camera);
   composer.addPass(ssaoPass);
+
+  const savePass = new SavePass(window.innerWidth, window.innerHeight);
+
+  const ssrPass = new SSRPass(gBuffer, camera, savePass.buffer);
+  composer.addPass(ssrPass);
+
   const lightingPass = new LightVolumePass(scene, camera, gBuffer);
   composer.addPass(lightingPass);
-  composer.addPass(new FinalLightPass(scene, camera, gBuffer, ssaoPass.ssaoBuffer.texture, irradianceMap.texture, prefilteredMap.texture, brdfLUT));
+
+  composer.addPass(new FinalLightPass(
+    scene, camera, gBuffer, ssaoPass.ssaoBuffer.texture, 
+    irradianceMap.texture, prefilteredMap.texture, brdfLUT, 
+    ssrPass.ssrBuffer.texture,
+  ));
+
+  composer.addPass(savePass);
+
   composer.addPass(new SkyPass(cubeMap.texture, camera));
+
   composer.addPass(new BloomPass(0.1, 0.005));
-  // composer.addPass(new DebugPass(prefilteredMap.texture));
+  // composer.addPass(new DebugPass(ssrPass.ssrBuffer.texture));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
   composer.passes.forEach((pass) => connectPassToTheatre(pass as RenderPass, sheet));
@@ -155,7 +172,7 @@ const setupCamera = () => {
     Math.tan(fowY) / 2.0
   );
 
-  camera.position.set(26.498286733354398, 16.81716069551973, 13.82369828615056);
+  camera.position.set(-26.09326933989273, 4.565589790360267, 3.423807085910849);
 
   return camera;
 }

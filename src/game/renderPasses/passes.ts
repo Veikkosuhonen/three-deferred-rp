@@ -6,6 +6,7 @@ import { thresholdShader } from "../shaders/threshold";
 import { copyShader } from "../shaders/copy";
 import { bloomMixShader, downsampleShader, upsampleShader } from "../shaders/bloom";
 import { RenderPass } from "./RenderPass";
+import { ssrShader } from "../shaders/ssr";
 
 const fsQuad = new FullScreenQuad();
 
@@ -111,8 +112,86 @@ export class SSAOPass extends RenderPass {
 
     renderer.setRenderTarget(this.ssaoBuffer);
     blur4xShader.uniforms.u_resolution.value.set(window.innerWidth * this.SCALE, window.innerHeight * this.SCALE);
-    blur4xShader.uniforms.inputTexture.value = this.ssaoBuffer2.texture;
+    blur4xShader.uniforms.src.value = this.ssaoBuffer2.texture;
     fsQuad.material = blur4xShader;
+    fsQuad.render(renderer);
+  }
+}
+
+export class SSRPass extends RenderPass {
+  gBuffer: THREE.WebGLRenderTarget;
+  ssrBuffer: THREE.WebGLRenderTarget;
+  blurBuffer: THREE.WebGLRenderTarget;
+  camera: THREE.Camera;
+
+  constructor(gBuffer: THREE.WebGLRenderTarget, camera: THREE.Camera, previousFrameBuffer: THREE.WebGLRenderTarget) {
+    super("SSRPass");
+    this.gBuffer = gBuffer;
+    this.ssrBuffer = new THREE.WebGLRenderTarget(window.innerWidth/2, window.innerHeight/2, {
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+    });
+
+    this.blurBuffer = new THREE.WebGLRenderTarget(window.innerWidth/4, window.innerHeight/4, {
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+    });
+
+    this.camera = camera;
+    
+    ssrShader.uniforms.previousFrame.value = previousFrameBuffer.texture;
+    ssrShader.uniforms.gNormalRoughness.value = this.gBuffer.textures[1];
+    ssrShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
+  }
+
+  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget): void {
+    renderer.setRenderTarget(this.ssrBuffer);
+    renderer.clear(true, true, false);
+    ssrShader.uniforms.u_resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
+    ssrShader.uniforms.projection.value.copy(this.camera.projectionMatrix);
+    ssrShader.uniforms.inverseProjection.value.copy(this.camera.projectionMatrixInverse);
+    fsQuad.material = ssrShader;
+    fsQuad.render(renderer);
+
+    renderer.setRenderTarget(this.blurBuffer);
+    blur4xShader.uniforms.src.value = this.ssrBuffer.texture;
+    blur4xShader.uniforms.u_resolution.value.set(this.blurBuffer.width, this.blurBuffer.height);
+    fsQuad.material = blur4xShader;
+    fsQuad.render(renderer);
+
+    renderer.setRenderTarget(this.ssrBuffer);
+    renderer.clear();
+    blur4xShader.uniforms.src.value = this.blurBuffer.texture;
+    blur4xShader.uniforms.u_resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
+    fsQuad.material = blur4xShader;
+    fsQuad.render(renderer);
+  }
+}
+
+export class SavePass extends RenderPass {
+  buffer: THREE.WebGLRenderTarget;
+
+  constructor(width: number, height: number) {
+    super("SavePass");
+    this.needsSwap = false;
+    this.buffer = new THREE.WebGLRenderTarget(width, height, {
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+    });
+  }
+
+  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+    renderer.setRenderTarget(this.buffer);
+    renderer.clear();
+    copyShader.uniforms.inputTexture.value = readBuffer.texture;
+    copyShader.uniforms.u_resolution.value.set(this.buffer.width, this.buffer.height);
+    fsQuad.material = copyShader;
     fsQuad.render(renderer);
   }
 }
@@ -181,7 +260,8 @@ export class FinalLightPass extends RenderPass {
     ssaoTexture: THREE.Texture, 
     irradianceMap: THREE.Texture,
     prefilteredMap: THREE.Texture,
-    brdfLUT: THREE.Texture
+    brdfLUT: THREE.Texture,
+    ssrTexture: THREE.Texture,
   ) {
     super("FinalLightPass");
     this.scene = scene;
@@ -196,6 +276,7 @@ export class FinalLightPass extends RenderPass {
     finalShader.uniforms.irradianceMap.value = irradianceMap;
     finalShader.uniforms.prefilterMap.value = prefilteredMap;
     finalShader.uniforms.brdfLUT.value = brdfLUT;
+    finalShader.uniforms.ssrTexture.value = ssrTexture;
   }
 
   render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
@@ -248,7 +329,7 @@ export class SkyPass extends RenderPass {
 }
 
 export class BloomPass extends RenderPass {
-  colorBuffers: THREE.WebGLRenderTarget[];
+  blurChain: THREE.WebGLRenderTarget[];
   bloomStrength;
   filterRadius;
 
@@ -256,7 +337,7 @@ export class BloomPass extends RenderPass {
     super("BloomPass");
     this.bloomStrength = bloomStrength;
     this.filterRadius = filterRadius;
-    this.colorBuffers = [];
+    this.blurChain = [];
 
     let w = window.innerWidth;
     let h = window.innerHeight;
@@ -266,47 +347,52 @@ export class BloomPass extends RenderPass {
     for (let i = 0; i < downscale; i++) {
       w = Math.max(1, w / 2);
       h = Math.max(1, h / 2);
-      this.colorBuffers.push(new THREE.WebGLRenderTarget(w, h, {
+
+      const rt = new THREE.WebGLRenderTarget(w, h, {
         format: THREE.RGBAFormat,
         type: THREE.FloatType,
         minFilter: THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
-      }));
+      });
+
+      this.blurChain.push(rt);
     }
   }
 
   render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
-    // Write bright color to first buffer
-    renderer.setRenderTarget(this.colorBuffers[0]);
-
+    renderer.setRenderTarget(this.blurChain[0]);
+    renderer.clear();
+  
     // Downsample
     fsQuad.material = downsampleShader;
     downsampleShader.uniforms.src.value = readBuffer.texture;
-    downsampleShader.uniforms.u_resolution.value.set(this.colorBuffers[0].width, this.colorBuffers[0].height);
+    downsampleShader.uniforms.u_resolution.value.set(this.blurChain[0].width, this.blurChain[0].height);
     fsQuad.render(renderer);
 
-    for (let destIdx = 1; destIdx < this.colorBuffers.length; destIdx++) {
+    for (let destIdx = 1; destIdx < this.blurChain.length; destIdx++) {
       const srcIdx = destIdx - 1;
-      renderer.setRenderTarget(this.colorBuffers[destIdx]);
-      downsampleShader.uniforms.src.value = this.colorBuffers[srcIdx].texture;
-      downsampleShader.uniforms.u_resolution.value.set(this.colorBuffers[destIdx].width, this.colorBuffers[destIdx].height);
+      renderer.setRenderTarget(this.blurChain[destIdx]);
+      renderer.clear();
+      downsampleShader.uniforms.src.value = this.blurChain[srcIdx].texture;
+      downsampleShader.uniforms.u_resolution.value.set(this.blurChain[destIdx].width, this.blurChain[destIdx].height);
       fsQuad.render(renderer);
     }
 
     // Upsample. Additively blend.
     fsQuad.material = upsampleShader;
     upsampleShader.uniforms.filterRadius.value = this.filterRadius;
-    for (let i = this.colorBuffers.length - 2; i >= 0; i--) {
-      renderer.setRenderTarget(this.colorBuffers[i]);
-      upsampleShader.uniforms.src.value = this.colorBuffers[i + 1].texture;
-      upsampleShader.uniforms.u_resolution.value.set(this.colorBuffers[i].width, this.colorBuffers[i].height);
+    for (let i = this.blurChain.length - 2; i >= 0; i--) {
+      renderer.setRenderTarget(this.blurChain[i]);
+      renderer.clear();
+      upsampleShader.uniforms.src.value = this.blurChain[i + 1].texture;
+      upsampleShader.uniforms.u_resolution.value.set(this.blurChain[i].width, this.blurChain[i].height);
       fsQuad.render(renderer);
     }
 
     fsQuad.material = bloomMixShader;
     renderer.setRenderTarget(writeBuffer);
     bloomMixShader.uniforms.src.value = readBuffer.texture;
-    bloomMixShader.uniforms.bloom.value = this.colorBuffers[0].texture;
+    bloomMixShader.uniforms.bloom.value = this.blurChain[0].texture;
     bloomMixShader.uniforms.u_resolution.value.set(writeBuffer.width, writeBuffer.height);
     bloomMixShader.uniforms.bloomStrength.value = this.bloomStrength;
     fsQuad.render(renderer);
