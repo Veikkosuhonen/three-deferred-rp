@@ -21,6 +21,12 @@ export const createScene = (game: Game) => {
 }
 
 const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
+
+  object.userData.previousWorldMatrix = new THREE.Matrix4();
+  object.onAfterRender = () => {
+    object.userData.previousWorldMatrix.copy(object.matrixWorld);
+  }
+
   if ("t_id" in object.userData) {
     connectObjectToTheatre(object, game.sheet);
   }
@@ -46,7 +52,6 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
   if ("static_collider" in object.userData || "mesh_collider" in object.userData) {
     let geometry;
     if (object.userData.collider_name) {
-      console.log(object)
       object.traverse((child) => {
         if (child.name === object.userData.collider_name && child instanceof THREE.Mesh) {
           geometry = child.geometry;
@@ -101,15 +106,6 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
   }
 
   if (object instanceof THREE.Mesh) {
-
-    
-
-    
-
-    if (object.userData.collider) {
-      console.log(object.name, object.userData)
-    }
-
     
     if (object.material instanceof THREE.MeshPhysicalMaterial) {
       // console.log(object.material)
@@ -122,13 +118,17 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
 
     // console.log(object.material);
 
-    Object.keys(shader.uniforms).forEach((key) => {
-      object.userData[key] = (object.material as Record<string, any>)[key]
+    shader.userData.materialKeys.forEach((key: string) => {
+      const materialProperty = (object.material as Record<string, any>)[key];
+      if (materialProperty !== undefined) {
+        object.userData[key] = materialProperty;
+      }
     })
 
     object.material = shader;
 
     object.onBeforeRender = () => {
+      shader.uniforms.previousWorldMatrix.value.copy(object.userData.previousWorldMatrix);
     
       if (object.userData.isDynamic) {
         const body = object.userData.body as RAPIER.RigidBody;
@@ -136,7 +136,7 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
         object.quaternion.copy(body.rotation());
       }
 
-      Object.keys(shader.uniforms).forEach((key) => {
+      shader.userData.materialKeys.forEach((key: string) => {
         shader.uniforms[key].value = object.userData[key]
       })
       shader.uniformsNeedUpdate = true;

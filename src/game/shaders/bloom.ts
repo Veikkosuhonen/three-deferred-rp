@@ -57,7 +57,7 @@ void main() {
   downsample += (b+d+f+h)*0.0625;
   downsample += (j+k+l+m)*0.125;
 
-  fragColor = vec4(downsample, 1.0);
+  fragColor = vec4(max(downsample, 0.0001), 1.0);
 }
 `;
 

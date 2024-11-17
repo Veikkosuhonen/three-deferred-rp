@@ -1,24 +1,29 @@
 import * as THREE from "three";
 import { FullScreenQuad } from "three/examples/jsm/Addons.js";
-import { lightningShader, blur4xShader, ssaoShader, finalShader } from "../shaders";
+import { lightningShader, blur4xShader, ssaoShader, iblShader } from "../shaders";
 import { skyShader } from "../shaders/sky";
-import { thresholdShader } from "../shaders/threshold";
 import { copyShader } from "../shaders/copy";
 import { bloomMixShader, downsampleShader, upsampleShader } from "../shaders/bloom";
 import { RenderPass } from "./RenderPass";
-import { ssrShader } from "../shaders/ssr";
+import { ssrResolveShader, ssrShader } from "../shaders/ssr";
+import { motionBlurShader } from "../shaders/motionBlur";
+import { gBufferBgVelocityShader, gBufferShaderVariants } from "../shaders/gbuffer";
 
 const fsQuad = new FullScreenQuad();
+const bgCube = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  gBufferBgVelocityShader,
+);
 
 export class GBufferPass extends RenderPass {
   scene: THREE.Scene;
-  camera: THREE.Camera;
+  camera: THREE.PerspectiveCamera;
   gBuffer: THREE.WebGLRenderTarget;
 
-  constructor(scene: THREE.Scene, camera: THREE.Camera, gBuffer: THREE.WebGLRenderTarget) {
+  constructor(scene: THREE.Scene, camera: THREE.PerspectiveCamera, gBuffer: THREE.WebGLRenderTarget) {
     super("GBufferPass");
-		this.scene = scene;
-		this.camera = camera;
+    this.scene = scene;
+    this.camera = camera;
     this.gBuffer = gBuffer;
   }
 
@@ -26,7 +31,21 @@ export class GBufferPass extends RenderPass {
     renderer.setRenderTarget(this.gBuffer);
     renderer.clear(true, true, true);
 
+    if (this.camera.userData.previousViewMatrix) {
+      // console.log(this.camera.userData.previousViewMatrix)
+      Object.values(gBufferShaderVariants).forEach((shader) => {
+        // console.log(shader.uniforms)
+        shader.uniforms.previousViewMatrix.value.copy(this.camera.userData.previousViewMatrix);
+      })
+    }
+
     renderer.render(this.scene, this.camera);
+
+    // Render background velocity
+    gBufferBgVelocityShader.uniforms.previousViewMatrix.value.copy(this.camera.userData.previousViewMatrix);
+    bgCube.position.copy(this.camera.position);
+    bgCube.scale.set(this.camera.far, this.camera.far, this.camera.far);
+    renderer.render(bgCube, this.camera);
   }
 }
 
@@ -118,64 +137,11 @@ export class SSAOPass extends RenderPass {
   }
 }
 
-export class SSRPass extends RenderPass {
-  gBuffer: THREE.WebGLRenderTarget;
-  ssrBuffer: THREE.WebGLRenderTarget;
-  blurBuffer: THREE.WebGLRenderTarget;
-  camera: THREE.Camera;
-
-  constructor(gBuffer: THREE.WebGLRenderTarget, camera: THREE.Camera, previousFrameBuffer: THREE.WebGLRenderTarget) {
-    super("SSRPass");
-    this.gBuffer = gBuffer;
-    this.ssrBuffer = new THREE.WebGLRenderTarget(window.innerWidth/2, window.innerHeight/2, {
-      format: THREE.RGBAFormat,
-      type: THREE.FloatType,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-    });
-
-    this.blurBuffer = new THREE.WebGLRenderTarget(window.innerWidth/4, window.innerHeight/4, {
-      format: THREE.RGBAFormat,
-      type: THREE.FloatType,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-    });
-
-    this.camera = camera;
-    
-    ssrShader.uniforms.previousFrame.value = previousFrameBuffer.texture;
-    ssrShader.uniforms.gNormalRoughness.value = this.gBuffer.textures[1];
-    ssrShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
-  }
-
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget): void {
-    renderer.setRenderTarget(this.ssrBuffer);
-    renderer.clear(true, true, false);
-    ssrShader.uniforms.u_resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
-    ssrShader.uniforms.projection.value.copy(this.camera.projectionMatrix);
-    ssrShader.uniforms.inverseProjection.value.copy(this.camera.projectionMatrixInverse);
-    fsQuad.material = ssrShader;
-    fsQuad.render(renderer);
-
-    renderer.setRenderTarget(this.blurBuffer);
-    blur4xShader.uniforms.src.value = this.ssrBuffer.texture;
-    blur4xShader.uniforms.u_resolution.value.set(this.blurBuffer.width, this.blurBuffer.height);
-    fsQuad.material = blur4xShader;
-    fsQuad.render(renderer);
-
-    renderer.setRenderTarget(this.ssrBuffer);
-    renderer.clear();
-    blur4xShader.uniforms.src.value = this.blurBuffer.texture;
-    blur4xShader.uniforms.u_resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
-    fsQuad.material = blur4xShader;
-    fsQuad.render(renderer);
-  }
-}
-
 export class SavePass extends RenderPass {
   buffer: THREE.WebGLRenderTarget;
+  source?: THREE.Texture;
 
-  constructor(width: number, height: number) {
+  constructor(width: number, height: number, source?: THREE.Texture) {
     super("SavePass");
     this.needsSwap = false;
     this.buffer = new THREE.WebGLRenderTarget(width, height, {
@@ -184,12 +150,13 @@ export class SavePass extends RenderPass {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
     });
+    this.source = source;
   }
 
   render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
     renderer.setRenderTarget(this.buffer);
-    renderer.clear();
-    copyShader.uniforms.inputTexture.value = readBuffer.texture;
+    renderer.clear(true, true, false);
+    copyShader.uniforms.src.value = this.source ?? readBuffer.texture;
     copyShader.uniforms.u_resolution.value.set(this.buffer.width, this.buffer.height);
     fsQuad.material = copyShader;
     fsQuad.render(renderer);
@@ -200,13 +167,16 @@ export class LightVolumePass extends RenderPass {
   scene: THREE.Scene;
   camera: THREE.Camera;
   gBuffer: THREE.WebGLRenderTarget;
+  lightBuffer: THREE.WebGLRenderTarget;
   lightVolume: THREE.Mesh;
 
-  constructor(scene: THREE.Scene, camera: THREE.Camera, gBuffer: THREE.WebGLRenderTarget) {
+  constructor(scene: THREE.Scene, camera: THREE.Camera, gBuffer: THREE.WebGLRenderTarget, lightBuffer: THREE.WebGLRenderTarget) {
     super("LightVolumePass");
+    this.needsSwap = false;
     this.scene = scene;
     this.camera = camera;
     this.gBuffer = gBuffer;
+    this.lightBuffer = lightBuffer;
   
     this.lightVolume = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
@@ -217,8 +187,8 @@ export class LightVolumePass extends RenderPass {
     lightningShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
   }
 
-  render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget) {
-    renderer.setRenderTarget(writeBuffer);
+  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget) {
+    renderer.setRenderTarget(this.lightBuffer);
     renderer.clear(true, true, false);
 
     lightningShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
@@ -246,53 +216,164 @@ export class LightVolumePass extends RenderPass {
   }
 }
 
-export class FinalLightPass extends RenderPass {
+export class IBLPass extends RenderPass {
   scene: THREE.Scene;
   camera: THREE.Camera;
   gBuffer: THREE.WebGLRenderTarget;
+  lightBuffer: THREE.WebGLRenderTarget;
   constantAmbientLight: THREE.Color = new THREE.Color(0.1, 0.1, 0.1);
   irradianceIntensity: number = 1.0;
   iblGamma: number = 2.2;
   iblExposure: number = 1.0;
 
   constructor(scene: THREE.Scene, camera: THREE.Camera, 
-    gBuffer: THREE.WebGLRenderTarget, 
+    gBuffer: THREE.WebGLRenderTarget,
+    lightBuffer: THREE.WebGLRenderTarget,
     ssaoTexture: THREE.Texture, 
     irradianceMap: THREE.Texture,
     prefilteredMap: THREE.Texture,
     brdfLUT: THREE.Texture,
-    ssrTexture: THREE.Texture,
   ) {
-    super("FinalLightPass");
+    super("IBLPass");
+    this.needsSwap = false;
     this.scene = scene;
     this.camera = camera;
     this.gBuffer = gBuffer;
+    this.lightBuffer = lightBuffer;
   
-    finalShader.uniforms.gColorAo.value = this.gBuffer.textures[0];
-    finalShader.uniforms.gNormalRoughness.value = this.gBuffer.textures[1];
-    finalShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
-    finalShader.uniforms.ssaoTexture.value = ssaoTexture;
-    finalShader.uniforms.gEmission.value = this.gBuffer.textures[3];
-    finalShader.uniforms.irradianceMap.value = irradianceMap;
-    finalShader.uniforms.prefilterMap.value = prefilteredMap;
-    finalShader.uniforms.brdfLUT.value = brdfLUT;
-    finalShader.uniforms.ssrTexture.value = ssrTexture;
+    iblShader.uniforms.gColorAo.value = this.gBuffer.textures[0];
+    iblShader.uniforms.gNormalRoughness.value = this.gBuffer.textures[1];
+    iblShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
+    iblShader.uniforms.ssaoTexture.value = ssaoTexture;
+    iblShader.uniforms.gEmission.value = this.gBuffer.textures[3];
+    iblShader.uniforms.irradianceMap.value = irradianceMap;
+    iblShader.uniforms.prefilterMap.value = prefilteredMap;
+    iblShader.uniforms.brdfLUT.value = brdfLUT;
   }
 
-  render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
-    renderer.setRenderTarget(writeBuffer);
+  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget): void {
+    renderer.setRenderTarget(this.lightBuffer);
+  
+    iblShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+    iblShader.uniforms.inverseViewMatrix.value.copy(this.camera.matrixWorld);
+
+    iblShader.uniforms.u_constantAmbientLight.value.copy(this.constantAmbientLight);
+    iblShader.uniforms.u_irradianceIntensity.value = this.irradianceIntensity
+    iblShader.uniforms.exposure.value = this.iblExposure;
+    iblShader.uniforms.gamma.value = this.iblGamma;
+
+    fsQuad.material = iblShader;
+    fsQuad.render(renderer);
+  }
+}
+
+export class TexturePass extends RenderPass {
+  texture: THREE.Texture;
+  mode: "additive"|"replace" = "replace";
+  intensity: number = 1.0;
+
+  constructor(
+    passName: string, 
+    texture: THREE.Texture, 
+    mode: "additive"|"replace" = "replace", 
+    intensity: number = 1.0,
+  ) {
+    super(passName);
+    this.needsSwap = false;
+    this.texture = texture;
+    this.mode = mode;
+    this.intensity = intensity;
+  }
+
+  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+    renderer.setRenderTarget(readBuffer);
+
+    if (this.mode === "additive") {
+      copyShader.blending = THREE.AdditiveBlending;
+      copyShader.transparent = true;
+    } else {
+      copyShader.blending = THREE.NormalBlending;
+      copyShader.transparent = false;
+    }
+
+    copyShader.uniforms.src.value = this.texture;
+    copyShader.uniforms.intensity.value = this.intensity;
+    copyShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+    fsQuad.material = copyShader;
+    fsQuad.render(renderer);
+  }
+}
+
+
+export class SSRPass extends RenderPass {
+  gBuffer: THREE.WebGLRenderTarget;
+  lightBuffer: THREE.WebGLRenderTarget;
+  ssrBuffer: THREE.WebGLRenderTarget;
+  blurBuffer: THREE.WebGLRenderTarget;
+  camera: THREE.Camera;
+
+  constructor(gBuffer: THREE.WebGLRenderTarget, camera: THREE.Camera, lightBuffer: THREE.WebGLRenderTarget, brdfLUT: THREE.Texture) {
+    super("SSRPass");
+    this.needsSwap = false;
+    this.gBuffer = gBuffer;
+    this.lightBuffer = lightBuffer;
+  
+    this.ssrBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      depthTexture: gBuffer.depthTexture,
+    });
+
+    this.blurBuffer = new THREE.WebGLRenderTarget(window.innerWidth/2, window.innerHeight/2, {
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+    });
+
+    this.camera = camera;
+    
+    ssrShader.uniforms.diffuse.value = lightBuffer.textures[0];
+    ssrShader.uniforms.gColorAo.value = this.gBuffer.textures[0];
+    ssrShader.uniforms.gNormalRoughness.value = this.gBuffer.textures[1];
+    ssrShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
+    ssrShader.uniforms.brdfLUT.value = brdfLUT;
+
+    ssrResolveShader.uniforms.ssr.value = this.ssrBuffer.texture;
+    ssrResolveShader.uniforms.specular.value = this.lightBuffer.textures[1];
+  }
+
+  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+    // Generate SSR
+    renderer.setRenderTarget(this.ssrBuffer);
     renderer.clear(true, true, false);
+    ssrShader.uniforms.u_resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
+    ssrShader.uniforms.projection.value.copy(this.camera.projectionMatrix);
+    ssrShader.uniforms.inverseProjection.value.copy(this.camera.projectionMatrixInverse);
+    ssrShader.uniforms.u_time.value = performance.now() / 1000;
+    fsQuad.material = ssrShader;
+    fsQuad.render(renderer);
 
-    finalShader.uniforms.lightningTexture.value = readBuffer.texture;
-    finalShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
-    finalShader.uniforms.inverseViewMatrix.value.copy(this.camera.matrixWorld);
+    // Blur SSR
+    renderer.setRenderTarget(this.blurBuffer);
+    blur4xShader.uniforms.src.value = this.ssrBuffer.texture;
+    blur4xShader.uniforms.u_resolution.value.set(this.blurBuffer.width, this.blurBuffer.height);
+    fsQuad.material = blur4xShader;
+    fsQuad.render(renderer);
 
-    finalShader.uniforms.u_constantAmbientLight.value.copy(this.constantAmbientLight);
-    finalShader.uniforms.u_irradianceIntensity.value = this.irradianceIntensity
-    finalShader.uniforms.exposure.value = this.iblExposure;
-    finalShader.uniforms.gamma.value = this.iblGamma;
+    // Blur again
+    renderer.setRenderTarget(this.ssrBuffer);
+    blur4xShader.uniforms.src.value = this.blurBuffer.texture;
+    blur4xShader.uniforms.u_resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
+    fsQuad.material = blur4xShader;
+    fsQuad.render(renderer);
 
-    fsQuad.material = finalShader;
+    // Resolve specular reflections
+    renderer.setRenderTarget(readBuffer);
+    ssrResolveShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+    fsQuad.material = ssrResolveShader;
     fsQuad.render(renderer);
   }
 }
@@ -399,20 +480,44 @@ export class BloomPass extends RenderPass {
   }
 }
 
+export class MotionBlurPass extends RenderPass {
+  camera: THREE.PerspectiveCamera;
+  amount: number = 1.0;
+
+  constructor(camera: THREE.PerspectiveCamera, gBuffer: THREE.WebGLRenderTarget) {
+    super("MotionBlurPass");
+    this.camera = camera;
+    motionBlurShader.uniforms.gPositionMetalness.value = gBuffer.textures[2];
+    motionBlurShader.uniforms.gVelocity.value = gBuffer.textures[4];
+  }
+
+  render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+    renderer.setRenderTarget(writeBuffer);
+    motionBlurShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+    motionBlurShader.uniforms.amount.value = this.amount;
+    motionBlurShader.uniforms.src.value = readBuffer.texture
+    fsQuad.material = motionBlurShader;
+    fsQuad.render(renderer);
+  }
+}
+
 export class DebugPass extends RenderPass {
   texture: THREE.Texture;
+  mode: number = 1.0;
 
   constructor(texture: THREE.Texture) {
     super("DebugPass");
     this.texture = texture;
+    this.needsSwap = false;
   }
 
   render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget, deltaTime: number, maskActive: boolean): void {
-    renderer.setRenderTarget(writeBuffer);
-    renderer.clear(true, true, true);
-    copyShader.uniforms.inputTexture.value = this.texture;
-    copyShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
-    fsQuad.material = copyShader;
-    fsQuad.render(renderer);
+    if (this.mode) {
+      renderer.setRenderTarget(readBuffer);
+      copyShader.uniforms.src.value = this.texture;
+      copyShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+      fsQuad.material = copyShader;
+      fsQuad.render(renderer);
+    }
   }
 }

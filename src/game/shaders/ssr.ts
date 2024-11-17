@@ -13,12 +13,15 @@ precision highp float;
 
 #define RANDOM_SCALE vec4(443.897, 441.423, .0973, .1099)
 
-uniform sampler2D previousFrame;
+uniform sampler2D diffuse;
+uniform sampler2D gColorAo;
 uniform sampler2D gNormalRoughness;
 uniform sampler2D gPositionMetalness;
+uniform sampler2D brdfLUT;
 uniform mat4 projection;
 uniform mat4 inverseProjection;
 uniform vec2 u_resolution;
+uniform float u_time;
 
 layout (location = 0) out vec4 FragColor;
 
@@ -28,11 +31,12 @@ vec3 random3(vec2 p) {
   return fract((p3.xxy + p3.yzz) * p3.zyx);
 }
 
-const int STEPS = 80;
-const int STEPS2 = 80;
+const int STEPS = 40;
+const int STEPS2 = 60;
 
-const float RAY_STEP = 0.1;
-const float BIAS = 0.02;
+const float RAY_STEP = 0.4;
+const float BIAS = 0.05;
+const int N_SAMPLES = 8;
 
 vec2 vsToScreen(vec3 positionVS) {
   vec4 clipSpacePosition = projection * vec4(positionVS, 1.0);
@@ -106,29 +110,39 @@ vec4 SSR(vec3 positionVS, vec3 reflection) {
   return vec4(0.0);
 }
 
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+  return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 void main() {
   vec2 uv = gl_FragCoord.xy / u_resolution;
-  vec3 positionVS = texture(gPositionMetalness, uv).xyz;
 
-  vec2 ndc = uv * 2.0 - 1.0;
-  vec4 clipSpacePosition = vec4(ndc, 1.0, 1.0);
-  vec4 viewSpacePos = inverseProjection * clipSpacePosition;
-  viewSpacePos /= viewSpacePos.w; // Perspective divide
-  vec3 viewDir = normalize(viewSpacePos.xyz);
-
+  vec3 albedo = texture(gColorAo, uv).rgb;
   vec4 normalRoughness = texture(gNormalRoughness, uv);
-  vec3 normalVS = normalize(normalRoughness.xyz);
+  vec4 positionMetalness = texture(gPositionMetalness, uv);
+  float metalness = positionMetalness.w;
   float roughness = normalRoughness.w;
 
-  vec3 reflection = normalize(reflect(viewDir, normalVS));
+  if (roughness > 0.4) {
+    FragColor = vec4(0.0);
+    return;
+  }
 
-  vec3 color = vec3(0.0);
+  vec3 positionVS = positionMetalness.xyz;
+  vec3 N = normalize(normalRoughness.xyz);
+
+  vec3 V = normalize(-positionVS.xyz);
+
+  vec3 R = normalize(reflect(-V, N));
+
+  vec3 reflectionColor = vec3(0.0);
   float hits = 0.0;
   float avgDist = 0.0;
 
-  for (int i = 0; i < 5; i++) {
-    vec3 jitter = 0.2 * roughness * roughness * (2.0 * random3(uv + float(i)).xyz - 1.0);
-    vec3 sampleReflection = normalize(reflection + jitter);
+  for (int i = 0; i < N_SAMPLES; i++) {
+    vec2 jitterSeed = uv + float(i) + u_time * 0.1;
+    vec3 jitter = roughness * roughness * (2.0 * random3(jitterSeed).xyz - 1.0);
+    vec3 sampleReflection = normalize(R + jitter);
     vec4 ssrResult = SSR(positionVS, sampleReflection);
     vec2 screenPos = ssrResult.xy;
     float dist = ssrResult.z;
@@ -137,8 +151,10 @@ void main() {
     if (hit == 0.0) {
       continue;
     }
-    vec3 hitColor = texture(previousFrame, screenPos).rgb;
-    color += hitColor;
+
+    vec3 hitColor = texture(diffuse, screenPos).rgb;
+
+    reflectionColor += hitColor;
     hits += 1.0;
     avgDist += dist;
   }
@@ -148,14 +164,20 @@ void main() {
     return;
   }
 
-  color /= hits;
-  
-  avgDist /= hits;
+  reflectionColor /= hits;
 
-  float contribution = max(1.0 - avgDist / 10.0, 0.0);
-  color *= contribution;
+  float NdotV = max(dot(N, V), 0.0);
 
-  FragColor = vec4(color, hits/10.0);
+  // Cook-Torrance BRDF
+  vec3 F0 = vec3(0.04);
+  F0 = mix(F0, albedo, metalness);
+
+  vec3 kS = fresnelSchlickRoughness(NdotV, F0, roughness);
+
+  vec2 envBRDF = texture(brdfLUT, vec2(NdotV, roughness)).rg;
+  vec3 ssrSpecular = reflectionColor * (kS * envBRDF.x + envBRDF.y);
+
+  FragColor = vec4(ssrSpecular, hits/float(N_SAMPLES));
 }
 `;
 
@@ -175,11 +197,65 @@ export const ssrShader = new THREE.RawShaderMaterial({
   stencilRef: 1,
 
   uniforms: {
-    previousFrame: { value: null },
+    diffuse: { value: null },
+    gColorAo: { value: null },
     gNormalRoughness: { value: null },
     gPositionMetalness: { value: null },
+    brdfLUT: { value: null },
     u_resolution: { value: new THREE.Vector2() },
+    u_time: { value: 0.0 },
     projection: { value: new THREE.Matrix4() },
     inverseProjection: { value: new THREE.Matrix4() },
+  },
+});
+
+const ssrResolveShaderFS = /* glsl */ `
+precision highp float;
+
+uniform sampler2D ssr;
+uniform sampler2D specular;
+uniform vec2 u_resolution;
+
+out vec4 FragColor;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+
+  vec4 ssr = texture(ssr, uv);
+
+  vec4 specular = texture(specular, uv);
+
+  float ssrContribution = ssr.a;
+
+  vec3 color = mix(specular.rgb, ssr.rgb, ssrContribution);
+
+  FragColor = vec4(color, 1.0);
+}
+`;
+
+export const ssrResolveShader = new THREE.RawShaderMaterial({
+  vertexShader: screenVS,
+  fragmentShader: ssrResolveShaderFS,
+  side: THREE.FrontSide,
+  glslVersion: "300 es",
+
+  depthTest: false,
+  depthWrite: false,
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+
+  stencilWrite: true,
+  stencilFunc: THREE.EqualStencilFunc,
+  stencilZPass: THREE.KeepStencilOp,
+  stencilFail: THREE.KeepStencilOp,
+  stencilZFail: THREE.KeepStencilOp,
+  stencilFuncMask: 0xff,
+  stencilWriteMask: 0xff,
+  stencilRef: 1,
+
+  uniforms: {
+    ssr: { value: null },
+    specular: { value: null },
+    u_resolution: { value: new THREE.Vector2() },
   },
 });

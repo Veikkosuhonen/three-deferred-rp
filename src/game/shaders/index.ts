@@ -1,12 +1,12 @@
-import { lightningShader } from "./lightning";
+import { lightningShader } from "./lighting";
 import { ssaoShader } from "./ssao";
 import { gauss9xBlurShader, blur4xShader } from "./blur";
-import { finalShader } from "./final";
+import { iblShader } from "./ibl";
 
 export {
   lightningShader,
   ssaoShader,
   gauss9xBlurShader,
   blur4xShader,
-  finalShader,
+  iblShader,
 }

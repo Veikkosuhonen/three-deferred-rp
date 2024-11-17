@@ -4,26 +4,26 @@
       "staticOverrides": {
         "byObject": {
           "BloomPass": {
-            "bloomStrength": 0.2,
+            "bloomStrength": 0.1,
             "filterRadius": 0.0049999999999999906
           },
           "SSAOPass": {
             "scale": 1
           },
           "FinalLightPass": {
-            "irradianceIntensity": 1.8499999999999677,
+            "irradianceIntensity": 1.7999999999999672,
             "constantAmbientLight": {
               "r": 0.011764705882352941,
               "g": 0.011764705882352941,
               "b": 0.011764705882352941,
               "a": 1
             },
-            "iblExposure": 0.2699999999999999,
-            "iblGamma": 2.310000000000001
+            "iblExposure": 0.4999999999999996,
+            "iblGamma": 2.100000000000001
           },
           "SkyPass": {
             "exposure": 0.2699999999999999,
-            "gamma": 2.310000000000001
+            "gamma": 2.0900000000000016
           },
           "Car": {
             "position": {
@@ -36,6 +36,9 @@
               "y": 0,
               "z": 0
             }
+          },
+          "MotionBlurPass": {
+            "amount": 1
           }
         }
       },
@@ -45,30 +48,8 @@
         "type": "PositionalSequence",
         "tracksByObject": {
           "BloomPass": {
-            "trackData": {
-              "uqZnrW3pl5": {
-                "type": "BasicKeyframedTrack",
-                "__debugName": "BloomPass:[\"bloomStrength\"]",
-                "keyframes": [
-                  {
-                    "id": "gNGNezlSJL",
-                    "position": -0.2,
-                    "connectedRight": true,
-                    "handles": [
-                      0.5,
-                      1,
-                      0.5,
-                      0
-                    ],
-                    "type": "bezier",
-                    "value": 0.01999999999999984
-                  }
-                ]
-              }
-            },
-            "trackIdByPropPath": {
-              "[\"bloomStrength\"]": "uqZnrW3pl5"
-            }
+            "trackData": {},
+            "trackIdByPropPath": {}
           },
           "Car": {
             "trackData": {
@@ -318,6 +299,7 @@
   },
   "definitionVersion": "0.4.0",
   "revisionHistory": [
+    "AaCPtIu4yPqOL03G",
     "BtfddIgmyZnW7ZdR",
     "LrI5BrVcJ4McNU0A",
     "CuGzrOPPOzclaUd7",

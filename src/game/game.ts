@@ -2,8 +2,8 @@ import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { createScene } from './scene';
 import { EffectComposer, Pass } from 'three/addons/postprocessing/EffectComposer.js';
-import { BloomPass, DebugPass, FinalLightPass, GBufferPass, LightVolumePass, SavePass, SkyPass, SSAOPass, SSRPass } from './renderPasses/passes';
-import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader } from 'three/examples/jsm/Addons.js';
+import { BloomPass, DebugPass, IBLPass, GBufferPass, LightVolumePass, MotionBlurPass, SavePass, SkyPass, SpecularCompositionPass, SSAOPass, SSRPass, TexturePass } from './renderPasses/passes';
+import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader, FlyControls } from 'three/examples/jsm/Addons.js';
 import { cubeToIrradiance, equirectToCube, equirectToPrefilter, generateBrdfLUT } from './envMaps';
 import studio from '@theatre/studio'
 import { getProject, ISheet, types } from '@theatre/core'
@@ -34,6 +34,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const controls = setupControls(camera, renderer);
   const depthStencilTexture = setupDepthStencilTexture();
   const gBuffer = setupGBuffer(depthStencilTexture);
+  const lightBuffer = setupLightBuffer(depthStencilTexture);
   const equirect = await loadEquirect();
   const cubeMap = equirectToCube(renderer, equirect, 1024);
   const irradianceMap = cubeToIrradiance(renderer, cubeMap.texture, 256);
@@ -47,37 +48,38 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const ssaoPass = new SSAOPass(gBuffer, camera);
   composer.addPass(ssaoPass);
 
-  const savePass = new SavePass(window.innerWidth, window.innerHeight);
-
-  const ssrPass = new SSRPass(gBuffer, camera, savePass.buffer);
-  composer.addPass(ssrPass);
-
-  const lightingPass = new LightVolumePass(scene, camera, gBuffer);
+  const lightingPass = new LightVolumePass(scene, camera, gBuffer, lightBuffer);
   composer.addPass(lightingPass);
 
-  composer.addPass(new FinalLightPass(
-    scene, camera, gBuffer, ssaoPass.ssaoBuffer.texture, 
-    irradianceMap.texture, prefilteredMap.texture, brdfLUT, 
-    ssrPass.ssrBuffer.texture,
+  composer.addPass(new IBLPass(
+    scene, camera, gBuffer, lightBuffer,
+    ssaoPass.ssaoBuffer.texture, 
+    irradianceMap.texture, prefilteredMap.texture, brdfLUT,
   ));
 
-  composer.addPass(savePass);
+  composer.addPass(new TexturePass("IBL Diffuse output", lightBuffer.textures[0]));
 
   composer.addPass(new SkyPass(cubeMap.texture, camera));
 
-  composer.addPass(new BloomPass(0.1, 0.005));
-  // composer.addPass(new DebugPass(ssrPass.ssrBuffer.texture));
+  composer.addPass(new MotionBlurPass(camera, gBuffer));
+
+  composer.addPass(new SSRPass(gBuffer, camera, lightBuffer, brdfLUT));
+
+  const bloomPass = new BloomPass(0.1, 0.005);
+  // composer.addPass(bloomPass);
+  // composer.addPass(new DebugPass(lightBuffer.textures[1]));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
   composer.passes.forEach((pass) => connectPassToTheatre(pass as RenderPass, sheet));
 
   const animate = () => {
     stats.begin();
-    controls.update(clock.getDelta());
+    controls.update(clock.getDelta() * 10.0);
     game.world.step();
     composer.render();
     debugLines.updateFromBuffer(game.world.debugRender())
     renderer.render(debugLines.lines, camera);
+    camera.userData.previousViewMatrix.copy(camera.matrixWorldInverse);
     stats.end();
     requestAnimationFrame(animate);
   }
@@ -118,19 +120,42 @@ const setupDepthStencilTexture = () => {
   return depthStencilTexture;
 }
 
+/**
+ * gBuffer is a render target that stores the following information:
+ * 0: Color + Ambient Occlusion
+ * 1: Normal + Roughness
+ * 2: Position + Metalness
+ * 3: Emission
+ * 4: Velocity
+ */
 const setupGBuffer = (depthTexture: THREE.DepthTexture) => {
   const gBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
     format: THREE.RGBAFormat,
     type: THREE.FloatType,
     minFilter: THREE.NearestFilter,
     magFilter: THREE.NearestFilter,
-    count: 4,
+    count: 5,
     depthBuffer: true,
     stencilBuffer: true,
     depthTexture,
   });
 
   return gBuffer;
+}
+
+const setupLightBuffer = (depthTexture: THREE.DepthTexture) => {
+  const lightBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+    format: THREE.RGBAFormat,
+    type: THREE.FloatType,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+    count: 2,
+    depthBuffer: true,
+    stencilBuffer: true,
+    depthTexture,
+  });
+
+  return lightBuffer;
 }
 
 const setupRenderer = (canvas: HTMLCanvasElement) => {
@@ -174,11 +199,15 @@ const setupCamera = () => {
 
   camera.position.set(-26.09326933989273, 4.565589790360267, 3.423807085910849);
 
+  camera.userData.previousViewMatrix = new THREE.Matrix4();
+
   return camera;
 }
 
 const setupControls = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) => {
   const controls = new MapControls(camera, renderer.domElement);
+  // controls.movementSpeed = 2;
+  // controls.rollSpeed = 0.05;
   return controls;
 }
 
