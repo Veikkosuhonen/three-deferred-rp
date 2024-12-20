@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { createScene } from './scene';
 import { EffectComposer, Pass } from 'three/addons/postprocessing/EffectComposer.js';
-import { BloomPass, DebugPass, IBLPass, GBufferPass, LightVolumePass, MotionBlurPass, SavePass, SkyPass, SpecularCompositionPass, SSAOPass, SSRPass, TexturePass } from './renderPasses/passes';
+import { BloomPass, DebugPass, IBLPass, GBufferPass, LightVolumePass, MotionBlurPass, SavePass, SkyPass, SSAOPass, SSRPass, TexturePass } from './renderPasses/passes';
 import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader, FlyControls } from 'three/examples/jsm/Addons.js';
 import { cubeToIrradiance, equirectToCube, equirectToPrefilter, generateBrdfLUT } from './envMaps';
 import studio from '@theatre/studio'
@@ -61,13 +61,13 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   composer.addPass(new SkyPass(cubeMap.texture, camera));
 
-  composer.addPass(new MotionBlurPass(camera, gBuffer));
+  // composer.addPass(new MotionBlurPass(camera, gBuffer));
 
   composer.addPass(new SSRPass(gBuffer, camera, lightBuffer, brdfLUT));
 
   const bloomPass = new BloomPass(0.1, 0.005);
-  // composer.addPass(bloomPass);
-  // composer.addPass(new DebugPass(lightBuffer.textures[1]));
+  composer.addPass(bloomPass);
+  // composer.addPass(new DebugPass(gBuffer.textures[1]));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
   composer.passes.forEach((pass) => connectPassToTheatre(pass as RenderPass, sheet));

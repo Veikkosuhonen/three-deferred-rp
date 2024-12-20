@@ -31,12 +31,12 @@ vec3 random3(vec2 p) {
   return fract((p3.xxy + p3.yzz) * p3.zyx);
 }
 
-const int STEPS = 40;
-const int STEPS2 = 60;
+const int STEPS = 20;
+const int STEPS2 = 30;
 
 const float RAY_STEP = 0.4;
 const float BIAS = 0.05;
-const int N_SAMPLES = 8;
+const int N_SAMPLES = 4;
 
 vec2 vsToScreen(vec3 positionVS) {
   vec4 clipSpacePosition = projection * vec4(positionVS, 1.0);

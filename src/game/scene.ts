@@ -5,6 +5,7 @@ import { ISheet } from '@theatre/core';
 import { connectObjectToTheatre } from './theatreThree';
 import { Game } from './gameState';
 import RAPIER from "@dimforge/rapier3d";
+import { basicRtMaterial } from './materials/basicRtMaterial';
 
 export const createScene = (game: Game) => {
   const scene = new THREE.Scene()
@@ -16,6 +17,15 @@ export const createScene = (game: Game) => {
     root.traverse((obj) => configureSceneObjects(obj, game))
     scene.add(root);
   });
+
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 10, 10),
+    basicRtMaterial,
+  );
+
+  box.position.set(0, 3, 10);
+
+  scene.add(box);
 
   return scene;
 }
