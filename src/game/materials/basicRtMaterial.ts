@@ -33,8 +33,8 @@ struct HitData {
 };
 
 float sphereSDF(vec3 p, float r) {
-    p += sin(u_time + p.y * 6.0) * 0.2;
-    p.y += sin(u_time + p.x * 3.0) * 0.03;
+    p += sin(u_time + p.y * 6.0) * 0.05;
+    // p.y += sin(u_time + p.x * 3.0) * 0.03;
 
     return length(p) - r;
 }

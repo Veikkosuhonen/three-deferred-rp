@@ -63,11 +63,12 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   // composer.addPass(new MotionBlurPass(camera, gBuffer));
 
-  composer.addPass(new SSRPass(gBuffer, camera, lightBuffer, brdfLUT));
+  const ssrPass = new SSRPass(gBuffer, camera, lightBuffer, brdfLUT);
+  composer.addPass(ssrPass);
 
   const bloomPass = new BloomPass(0.1, 0.005);
   composer.addPass(bloomPass);
-  // composer.addPass(new DebugPass(gBuffer.textures[1]));
+  // composer.addPass(new DebugPass(ssrPass.ssrBuffer.texture));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
   composer.passes.forEach((pass) => connectPassToTheatre(pass as RenderPass, sheet));

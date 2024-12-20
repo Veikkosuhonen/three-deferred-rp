@@ -5,7 +5,8 @@ import { skyShader } from "../shaders/sky";
 import { copyShader } from "../shaders/copy";
 import { bloomMixShader, downsampleShader, upsampleShader } from "../shaders/bloom";
 import { RenderPass } from "./RenderPass";
-import { ssrResolveShader, ssrShader } from "../shaders/ssr";
+import { ssrResolveShader, ssrShader as ssrShader0 } from "../shaders/ssr";
+import { ssrShader as ssrShader } from "../shaders/ssr2";
 import { motionBlurShader } from "../shaders/motionBlur";
 import { gBufferBgVelocityShader, gBufferShaderVariants } from "../shaders/gbuffer";
 
@@ -349,7 +350,7 @@ export class SSRPass extends RenderPass {
     // Generate SSR
     renderer.setRenderTarget(this.ssrBuffer);
     renderer.clear(true, true, false);
-    ssrShader.uniforms.u_resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
+    ssrShader.uniforms.resolution.value.set(this.ssrBuffer.width, this.ssrBuffer.height);
     ssrShader.uniforms.projection.value.copy(this.camera.projectionMatrix);
     ssrShader.uniforms.inverseProjection.value.copy(this.camera.projectionMatrixInverse);
     ssrShader.uniforms.u_time.value = performance.now() / 1000;
