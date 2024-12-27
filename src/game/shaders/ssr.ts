@@ -13,7 +13,8 @@ precision highp float;
 
 #define RANDOM_SCALE vec4(443.897, 441.423, .0973, .1099)
 
-uniform sampler2D diffuse;
+uniform sampler2D reflectionSource0;
+uniform sampler2D reflectionSource1;
 uniform sampler2D gColorAo;
 uniform sampler2D gNormalRoughness;
 uniform sampler2D gPositionMetalness;
@@ -152,7 +153,7 @@ void main() {
       continue;
     }
 
-    vec3 hitColor = texture(diffuse, screenPos).rgb;
+    vec3 hitColor = texture(reflectionSource0, screenPos).rgb + texture(reflectionSource1, screenPos).rgb;
 
     reflectionColor += hitColor;
     hits += 1.0;
@@ -197,7 +198,8 @@ export const ssrShader = new THREE.RawShaderMaterial({
   stencilRef: 1,
 
   uniforms: {
-    diffuse: { value: null },
+    reflectionSource0: { value: null },
+    reflectionSource1: { value: null },
     gColorAo: { value: null },
     gNormalRoughness: { value: null },
     gPositionMetalness: { value: null },

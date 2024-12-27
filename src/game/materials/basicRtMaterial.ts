@@ -183,8 +183,8 @@ export const basicRtMaterial = new THREE.ShaderMaterial({
 });
 
 basicRtMaterial.onBeforeRender = (renderer, scene, camera: THREE.PerspectiveCamera, geometry, object, group) => {
-    // basicRtMaterial.uniforms.previousWorldMatrix.value.copy(object.userData.previousWorldMatrix);
-    // basicRtMaterial.uniforms.previousViewMatrix.value.copy(camera.userData.previousViewMatrix);
+    basicRtMaterial.uniforms.previousViewMatrix.value.copy(camera.userData.previousViewMatrix);
+    basicRtMaterial.uniforms.previousWorldMatrix.value.copy(object.userData.previousWorldMatrix);
     basicRtMaterial.uniforms.cameraPositionOS.value.copy(object.worldToLocal(camera.position.clone()));
     basicRtMaterial.uniforms.u_time.value = performance.now() / 1000;
     basicRtMaterial.uniforms.near.value = camera.near;

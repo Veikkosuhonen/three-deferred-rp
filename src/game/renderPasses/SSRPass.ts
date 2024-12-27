@@ -6,16 +6,14 @@ import { ssrResolveShader, ssrShader } from "../shaders/ssr2";
 
 export class SSRPass extends RenderPass {
   gBuffer: THREE.WebGLRenderTarget;
-  lightBuffer: THREE.WebGLRenderTarget;
   ssrBuffer: THREE.WebGLRenderTarget;
   blurBuffer: THREE.WebGLRenderTarget;
   camera: THREE.Camera;
 
-  constructor(gBuffer: THREE.WebGLRenderTarget, camera: THREE.Camera, lightBuffer: THREE.WebGLRenderTarget, brdfLUT: THREE.Texture) {
+  constructor(gBuffer: THREE.WebGLRenderTarget, camera: THREE.Camera, reflectionSource: THREE.Texture, specularSource: THREE.Texture, brdfLUT: THREE.Texture) {
     super("SSRPass");
     this.needsSwap = false;
     this.gBuffer = gBuffer;
-    this.lightBuffer = lightBuffer;
   
     this.ssrBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
       format: THREE.RGBAFormat,
@@ -34,14 +32,15 @@ export class SSRPass extends RenderPass {
 
     this.camera = camera;
     
-    ssrShader.uniforms.diffuse.value = lightBuffer.textures[0];
+    ssrShader.uniforms.reflectionSource.value = reflectionSource;
     ssrShader.uniforms.gColorAo.value = this.gBuffer.textures[0];
     ssrShader.uniforms.gNormalRoughness.value = this.gBuffer.textures[1];
     ssrShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
+    ssrShader.uniforms.velocity.value = this.gBuffer.textures[4];
     ssrShader.uniforms.brdfLUT.value = brdfLUT;
 
     ssrResolveShader.uniforms.ssr.value = this.ssrBuffer.texture;
-    ssrResolveShader.uniforms.specular.value = this.lightBuffer.textures[1];
+    ssrResolveShader.uniforms.specular.value = specularSource
   }
 
   render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {

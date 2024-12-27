@@ -19,6 +19,8 @@ import { TexturePass } from './renderPasses/TexturePass';
 import { SkyPass } from './renderPasses/SkyPass';
 import { SSRPass } from './renderPasses/SSRPass';
 import { BloomPass } from './renderPasses/BloomPass';
+import { SavePass } from './renderPasses/SavePass';
+import { MotionBlurPass } from './renderPasses/MotionBlurPass';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
@@ -50,6 +52,8 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   const composer = setupComposer(renderer, depthStencilTexture);
 
+  const savePass = new SavePass(gBuffer.width, gBuffer.height);
+
   composer.addPass(new GBufferPass(scene, camera, gBuffer));
 
   const ssaoPass = new SSAOPass(gBuffer, camera);
@@ -68,10 +72,12 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   composer.addPass(new SkyPass(cubeMap.texture, camera));
 
-  // composer.addPass(new MotionBlurPass(camera, gBuffer));
-
-  const ssrPass = new SSRPass(gBuffer, camera, lightBuffer, brdfLUT);
+  const ssrPass = new SSRPass(gBuffer, camera, savePass.buffer.texture, lightBuffer.textures[1], brdfLUT);
   composer.addPass(ssrPass);
+
+  composer.addPass(savePass);
+
+  composer.addPass(new MotionBlurPass(camera, gBuffer));
 
   const bloomPass = new BloomPass(0.1, 0.005);
   composer.addPass(bloomPass);
@@ -205,7 +211,7 @@ const setupCamera = () => {
     Math.tan(fowY) / 2.0
   );
 
-  camera.position.set(-26.09326933989273, 4.565589790360267, 3.423807085910849);
+  camera.position.set(-27.821894295686906, 4.005944047965478, -10.942746348358149)
 
   camera.userData.previousViewMatrix = new THREE.Matrix4();
 

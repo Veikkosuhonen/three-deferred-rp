@@ -9,10 +9,11 @@ precision highp float;
 
 #define RANDOM_SCALE vec4(443.897, 441.423, .0973, .1099)
 
-uniform sampler2D diffuse;
+uniform sampler2D reflectionSource;
 uniform sampler2D gColorAo;
 uniform sampler2D gNormalRoughness;
 uniform sampler2D gPositionMetalness;
+uniform sampler2D velocity;
 uniform sampler2D brdfLUT;
 uniform mat4 projection;
 uniform mat4 inverseProjection;
@@ -179,7 +180,8 @@ void main() {
       continue;
     }
 
-    vec3 hitColor = texture(diffuse, hitData.screenPos).rgb;
+    vec2 reflectionUv = hitData.screenPos - texture(velocity, hitData.screenPos).xy;
+    vec3 hitColor = texture(reflectionSource, hitData.screenPos).rgb;
 
     reflectionColor += hitColor;
     hits += 1.0;
@@ -223,10 +225,11 @@ export const ssrShader = new THREE.RawShaderMaterial({
   stencilRef: 1,
 
   uniforms: {
-    diffuse: { value: null },
+    reflectionSource: { value: null },
     gColorAo: { value: null },
     gNormalRoughness: { value: null },
     gPositionMetalness: { value: null },
+    velocity: { value: null },
     brdfLUT: { value: null },
     resolution: { value: new THREE.Vector2() },
     u_time: { value: 0.0 },

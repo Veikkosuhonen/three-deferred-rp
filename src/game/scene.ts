@@ -25,6 +25,11 @@ export const createScene = (game: Game) => {
 
   box.position.set(0, 3, 10);
 
+  box.userData.previousWorldMatrix = new THREE.Matrix4();
+  box.onAfterRender = () => {
+    box.userData.previousWorldMatrix.copy(box.matrixWorld);
+  }
+
   scene.add(box);
 
   return scene;
