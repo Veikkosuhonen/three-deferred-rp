@@ -20,7 +20,7 @@ uniform sampler2D gPositionMetalness;
 uniform sampler2D brdfLUT;
 uniform mat4 projection;
 uniform mat4 inverseProjection;
-uniform vec2 u_resolution;
+uniform vec2 resolution;
 uniform float u_time;
 
 layout (location = 0) out vec4 FragColor;
@@ -115,7 +115,7 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 }
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / u_resolution;
+  vec2 uv = gl_FragCoord.xy / resolution;
 
   vec3 albedo = texture(gColorAo, uv).rgb;
   vec4 normalRoughness = texture(gNormalRoughness, uv);
@@ -202,10 +202,12 @@ export const ssrShader = new THREE.RawShaderMaterial({
     gNormalRoughness: { value: null },
     gPositionMetalness: { value: null },
     brdfLUT: { value: null },
-    u_resolution: { value: new THREE.Vector2() },
+    resolution: { value: new THREE.Vector2() },
     u_time: { value: 0.0 },
     projection: { value: new THREE.Matrix4() },
     inverseProjection: { value: new THREE.Matrix4() },
+    cameraNear: { value: 0.1 },
+    cameraFar: { value: 1000 },
   },
 });
 
@@ -214,12 +216,12 @@ precision highp float;
 
 uniform sampler2D ssr;
 uniform sampler2D specular;
-uniform vec2 u_resolution;
+uniform vec2 resolution;
 
 out vec4 FragColor;
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / u_resolution;
+  vec2 uv = gl_FragCoord.xy / resolution;
 
   vec4 ssr = texture(ssr, uv);
 
@@ -256,6 +258,6 @@ export const ssrResolveShader = new THREE.RawShaderMaterial({
   uniforms: {
     ssr: { value: null },
     specular: { value: null },
-    u_resolution: { value: new THREE.Vector2() },
+    resolution: { value: new THREE.Vector2() },
   },
 });

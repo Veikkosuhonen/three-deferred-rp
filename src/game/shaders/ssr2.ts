@@ -150,12 +150,12 @@ void main() {
 
       float away = pointToLineDistance(vP, viewPosition, d1viewPosition);
 
-      float minThickness;
-      vec2 xyNeighbor = xy;
-      xyNeighbor.x += 1.;
-      vec2 uvNeighbor = xyNeighbor / resolution;
-      vec3 vPNeighbor = texture(gPositionMetalness, uvNeighbor).xyz;
-      minThickness = vPNeighbor.x - vP.x;
+      // float minThickness;
+      // vec2 xyNeighbor = xy;
+      // xyNeighbor.x += 1.;
+      // vec2 uvNeighbor = xyNeighbor / resolution;
+      // vec3 vPNeighbor = texture(gPositionMetalness, uvNeighbor).xyz;
+      // minThickness = vPNeighbor.x - vP.x;
       // minThickness *= 3.;
 
       const float thickness = 0.1;
@@ -166,8 +166,8 @@ void main() {
       if (hit) {
         vec3 vN = normalize(texture(gNormalRoughness, uv).xyz);
         if (dot(viewReflectDir, vN) >= 0.0) continue;
-        float distance = pointPlaneDistance(vP, viewPosition, viewNormal);
-        if (distance > maxDistance) break;
+        // float distance = pointPlaneDistance(vP, viewPosition, viewNormal);
+        // if (distance > maxDistance) break;
 
         hitData.screenPos = uv;
         hitData.isHit = 1.0;
@@ -289,6 +289,6 @@ export const ssrResolveShader = new THREE.RawShaderMaterial({
   uniforms: {
     ssr: { value: null },
     specular: { value: null },
-    u_resolution: { value: new THREE.Vector2() },
+    resolution: { value: new THREE.Vector2() },
   },
 });

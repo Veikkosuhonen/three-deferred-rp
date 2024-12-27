@@ -2,7 +2,6 @@ import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { createScene } from './scene';
 import { EffectComposer, Pass } from 'three/addons/postprocessing/EffectComposer.js';
-import { BloomPass, DebugPass, IBLPass, GBufferPass, LightVolumePass, MotionBlurPass, SavePass, SkyPass, SSAOPass, SSRPass, TexturePass } from './renderPasses/passes';
 import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader, FlyControls } from 'three/examples/jsm/Addons.js';
 import { cubeToIrradiance, equirectToCube, equirectToPrefilter, generateBrdfLUT } from './envMaps';
 import studio from '@theatre/studio'
@@ -12,6 +11,14 @@ import { connectPassToTheatre } from './theatreThree';
 import { Game } from './gameState';
 import { createLines } from './lineRenderer';
 import theatreProject from "./demo project.theatre-project-state.json";
+import { GBufferPass } from './renderPasses/GBufferPass';
+import { SSAOPass } from './renderPasses/SSAOPass';
+import { LightPass } from './renderPasses/LightPass';
+import { IBLPass } from './renderPasses/IBLPass';
+import { TexturePass } from './renderPasses/TexturePass';
+import { SkyPass } from './renderPasses/SkyPass';
+import { SSRPass } from './renderPasses/SSRPass';
+import { BloomPass } from './renderPasses/BloomPass';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
@@ -48,7 +55,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const ssaoPass = new SSAOPass(gBuffer, camera);
   composer.addPass(ssaoPass);
 
-  const lightingPass = new LightVolumePass(scene, camera, gBuffer, lightBuffer);
+  const lightingPass = new LightPass(scene, camera, gBuffer, lightBuffer);
   composer.addPass(lightingPass);
 
   composer.addPass(new IBLPass(
