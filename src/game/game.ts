@@ -21,6 +21,7 @@ import { SSRPass } from './renderPasses/SSRPass';
 import { BloomPass } from './renderPasses/BloomPass';
 import { SavePass } from './renderPasses/SavePass';
 import { MotionBlurPass } from './renderPasses/MotionBlurPass';
+import { BokehPass } from './renderPasses/BokehPass';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
@@ -77,7 +78,9 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   composer.addPass(savePass);
 
-  composer.addPass(new MotionBlurPass(camera, gBuffer));
+  // composer.addPass(new MotionBlurPass(camera, gBuffer));
+
+  composer.addPass(new BokehPass(gBuffer, camera))
 
   const bloomPass = new BloomPass(0.1, 0.005);
   composer.addPass(bloomPass);
