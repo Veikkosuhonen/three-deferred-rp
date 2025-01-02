@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { blur4xShader, ssaoShader } from "../shaders";
 import { fsQuad } from "./utils";
 
@@ -77,7 +77,7 @@ export class SSAOPass extends RenderPass {
     ssaoShader.uniforms.ssaoKernel.value = this.ssaoKernel;
   }
 
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget): void {
+  pass({ renderer }: PassProps): void {
     renderer.setRenderTarget(this.ssaoBuffer2);
     ssaoShader.uniforms.u_resolution.value.set(window.innerWidth * this.SCALE, window.innerHeight * this.SCALE);
     ssaoShader.uniforms.projection.value.copy(this.camera.projectionMatrix);

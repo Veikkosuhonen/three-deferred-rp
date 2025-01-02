@@ -6,8 +6,15 @@ import { connectObjectToTheatre } from './theatreThree';
 import { Game } from './gameState';
 import RAPIER from "@dimforge/rapier3d";
 import { basicRtMaterial } from './materials/basicRtMaterial';
+import { grid } from './world/blocks';
 
-export const createScene = (game: Game) => {
+export const setupScene = (game: Game) => {
+  game.scene.add(grid.generate())
+
+  game.scene.traverse(obj => configureSceneObjects(obj, game))
+}
+
+const createScene0 = (game: Game) => {
   const scene = new THREE.Scene()
 
   const gltfLoader = new GLTFLoader(game.loadingManager);
@@ -137,6 +144,8 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
       const materialProperty = (object.material as Record<string, any>)[key];
       if (materialProperty !== undefined) {
         object.userData[key] = materialProperty;
+      } else {
+        console.warn(`Object missing property ${key}`, object)
       }
     })
 
@@ -160,7 +169,7 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
 
   if (object instanceof THREE.Light) {
     if (object instanceof THREE.PointLight) {
-      object.distance = object.intensity;
+      object.distance = 2 * object.intensity;
       // console.log(object.name, object)
     }
   }

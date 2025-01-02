@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { bokehShader } from "../shaders/bokeh";
 import { fsQuad } from "./utils";
 
@@ -18,17 +18,17 @@ export class BokehPass extends RenderPass {
     bokehShader.uniforms.farClip.value = camera.far;
   }
 
-  render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
-    renderer.setRenderTarget(writeBuffer);
+  pass({ renderer, read, write }: PassProps): void {
+    renderer.setRenderTarget(write);
     renderer.clear();
 
     fsQuad.material = bokehShader;
 
-    bokehShader.uniforms.src.value = readBuffer.texture;
+    bokehShader.uniforms.src.value = read.texture;
     bokehShader.uniforms.focus.value = this.focus;
     bokehShader.uniforms.aperture.value = this.aperture;
     bokehShader.uniforms.maxBlur.value = this.maxBlur;
-    bokehShader.uniforms.u_resolution.value.set(readBuffer.width, readBuffer.height)
+    bokehShader.uniforms.u_resolution.value.set(read.width, read.height)
 
     fsQuad.render(renderer);
   }

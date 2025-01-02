@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { blur4xShader } from "../shaders";
 import { fsQuad } from "./utils";
 import { ssrResolveShader, ssrShader } from "../shaders/ssr2";
@@ -43,7 +43,7 @@ export class SSRPass extends RenderPass {
     ssrResolveShader.uniforms.specular.value = specularSource
   }
 
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+  pass({ renderer, read }: PassProps): void {
     // Generate SSR
     renderer.setRenderTarget(this.ssrBuffer);
     renderer.clear(true, true, false);
@@ -69,7 +69,7 @@ export class SSRPass extends RenderPass {
     fsQuad.render(renderer);
 
     // Resolve specular reflections
-    renderer.setRenderTarget(readBuffer);
+    renderer.setRenderTarget(read);
     ssrResolveShader.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
     fsQuad.material = ssrResolveShader;
     fsQuad.render(renderer);

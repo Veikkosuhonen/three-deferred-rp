@@ -1,7 +1,8 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
-import { gBufferBgVelocityShader, gBufferShaderVariants } from "../shaders/gbuffer";
+import { PassProps, RenderPass } from "./RenderPass";
+import { gBufferShaderVariants } from "../shaders/gbuffer";
 import { bgCube } from "./utils";
+import { skyGBufferShader } from "../shaders/skyGBuffer";
 
 export class GBufferPass extends RenderPass {
   scene: THREE.Scene;
@@ -15,7 +16,7 @@ export class GBufferPass extends RenderPass {
     this.gBuffer = gBuffer;
   }
 
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget) {
+  pass({ renderer }: PassProps) {
     renderer.setRenderTarget(this.gBuffer);
     renderer.clear(true, true, true);
 
@@ -29,8 +30,9 @@ export class GBufferPass extends RenderPass {
 
     renderer.render(this.scene, this.camera);
 
-    // Render background velocity
-    gBufferBgVelocityShader.uniforms.previousViewMatrix.value.copy(this.camera.userData.previousViewMatrix);
+    // Render sky to gbuffer also
+    bgCube.material = skyGBufferShader;
+    skyGBufferShader.uniforms.previousViewMatrix.value.copy(this.camera.userData.previousViewMatrix);
     bgCube.position.copy(this.camera.position);
     bgCube.scale.set(this.camera.far, this.camera.far, this.camera.far);
     renderer.render(bgCube, this.camera);

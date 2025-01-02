@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { fsQuad } from "./utils";
 import { bloomMixShader, downsampleShader, upsampleShader } from "../shaders/bloom";
 
@@ -34,13 +34,13 @@ export class BloomPass extends RenderPass {
     }
   }
 
-  render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+  pass({ renderer, read, write }: PassProps): void {
     renderer.setRenderTarget(this.blurChain[0]);
     renderer.clear();
   
     // Downsample
     fsQuad.material = downsampleShader;
-    downsampleShader.uniforms.src.value = readBuffer.texture;
+    downsampleShader.uniforms.src.value = read.texture;
     downsampleShader.uniforms.u_resolution.value.set(this.blurChain[0].width, this.blurChain[0].height);
     fsQuad.render(renderer);
 
@@ -65,10 +65,10 @@ export class BloomPass extends RenderPass {
     }
 
     fsQuad.material = bloomMixShader;
-    renderer.setRenderTarget(writeBuffer);
-    bloomMixShader.uniforms.src.value = readBuffer.texture;
+    renderer.setRenderTarget(write);
+    bloomMixShader.uniforms.src.value = read.texture;
     bloomMixShader.uniforms.bloom.value = this.blurChain[0].texture;
-    bloomMixShader.uniforms.u_resolution.value.set(writeBuffer.width, writeBuffer.height);
+    bloomMixShader.uniforms.u_resolution.value.set(write.width, write.height);
     bloomMixShader.uniforms.bloomStrength.value = this.bloomStrength;
     fsQuad.render(renderer);
   }

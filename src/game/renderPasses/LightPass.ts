@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { lightningShader } from "../shaders";
 
 export class LightPass extends RenderPass {
@@ -26,7 +26,7 @@ export class LightPass extends RenderPass {
     lightningShader.uniforms.gPositionMetalness.value = this.gBuffer.textures[2];
   }
 
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget) {
+  pass({ renderer }: PassProps) {
     renderer.setRenderTarget(this.lightBuffer);
     renderer.clear(true, true, false);
 
@@ -34,16 +34,19 @@ export class LightPass extends RenderPass {
     lightningShader.uniforms.u_camPos.value.copy(this.camera.position);
     lightningShader.uniforms.modelViewMatrix.value.copy(this.camera.modelViewMatrix);
     lightningShader.uniforms.projectionMatrix.value.copy(this.camera.projectionMatrix);
+
+    const positionWS = new THREE.Vector3()
     
     this.scene.traverse((obj) => {
       if (!(obj instanceof THREE.PointLight)) return;
 
       lightningShader.uniforms.lightColor.value.copy(obj.color);
       lightningShader.uniforms.lightColor.value.multiplyScalar(obj.intensity);
-      const positionVS = obj.position.clone().applyMatrix4(this.camera.matrixWorldInverse);
+      obj.getWorldPosition(positionWS)
+      const positionVS = positionWS.clone().applyMatrix4(this.camera.matrixWorldInverse);
       lightningShader.uniforms.lightPositionVS.value.copy(positionVS);
 
-      this.lightVolume.position.copy(obj.position);
+      this.lightVolume.position.copy(positionWS)
       this.lightVolume.scale.set(obj.distance, obj.distance, obj.distance);
       this.lightVolume.updateMatrix();
     

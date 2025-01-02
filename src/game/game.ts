@@ -1,27 +1,13 @@
 import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
-import { createScene } from './scene';
-import { EffectComposer, Pass } from 'three/addons/postprocessing/EffectComposer.js';
-import { ACESFilmicToneMappingShader, ShaderPass, MapControls, RGBELoader, FlyControls } from 'three/examples/jsm/Addons.js';
-import { cubeToIrradiance, equirectToCube, equirectToPrefilter, generateBrdfLUT } from './envMaps';
+import { setupScene } from './scene';
+import { MapControls } from 'three/examples/jsm/Addons.js';
 import studio from '@theatre/studio'
-import { getProject, ISheet, types } from '@theatre/core'
-import { RenderPass } from './renderPasses/RenderPass';
-import { connectPassToTheatre } from './theatreThree';
+import { getProject } from '@theatre/core'
 import { Game } from './gameState';
 import { createLines } from './lineRenderer';
 import theatreProject from "./demo project.theatre-project-state.json";
-import { GBufferPass } from './renderPasses/GBufferPass';
-import { SSAOPass } from './renderPasses/SSAOPass';
-import { LightPass } from './renderPasses/LightPass';
-import { IBLPass } from './renderPasses/IBLPass';
-import { TexturePass } from './renderPasses/TexturePass';
-import { SkyPass } from './renderPasses/SkyPass';
-import { SSRPass } from './renderPasses/SSRPass';
-import { BloomPass } from './renderPasses/BloomPass';
-import { SavePass } from './renderPasses/SavePass';
-import { MotionBlurPass } from './renderPasses/MotionBlurPass';
-import { BokehPass } from './renderPasses/BokehPass';
+import { setupPipeline } from './pipeline';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
@@ -32,71 +18,29 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const sheet = project.sheet("demo sheet");
   onLoaded = () => sheet.sequence.play({ iterationCount: Infinity, rate: 1.5 });
 
-  const game = new Game(sheet, loadingManager);
+  const renderer = setupRenderer(canvas);
+  const camera = setupCamera();
+  const scene = new THREE.Scene()
+  const game = new Game(renderer, scene, camera, sheet, loadingManager);
+
+  setupScene(game)
 
   const stats = setupStats();
 
-  const renderer = setupRenderer(canvas);
-  const scene = createScene(game);
   const debugLines = createLines();
-  const camera = setupCamera();
   const clock = new THREE.Clock();
-  const controls = setupControls(camera, renderer);
-  const depthStencilTexture = setupDepthStencilTexture();
-  const gBuffer = setupGBuffer(depthStencilTexture);
-  const lightBuffer = setupLightBuffer(depthStencilTexture);
-  const equirect = await loadEquirect();
-  const cubeMap = equirectToCube(renderer, equirect, 1024);
-  const irradianceMap = cubeToIrradiance(renderer, cubeMap.texture, 256);
-  const prefilteredMap = equirectToPrefilter(renderer, equirect);
-  const brdfLUT = generateBrdfLUT(renderer);
+  const controls = setupControls(game.mainCamera, renderer);
 
-  const composer = setupComposer(renderer, depthStencilTexture);
-
-  const savePass = new SavePass(gBuffer.width, gBuffer.height);
-
-  composer.addPass(new GBufferPass(scene, camera, gBuffer));
-
-  const ssaoPass = new SSAOPass(gBuffer, camera);
-  composer.addPass(ssaoPass);
-
-  const lightingPass = new LightPass(scene, camera, gBuffer, lightBuffer);
-  composer.addPass(lightingPass);
-
-  composer.addPass(new IBLPass(
-    scene, camera, gBuffer, lightBuffer,
-    ssaoPass.ssaoBuffer.texture, 
-    irradianceMap.texture, prefilteredMap.texture, brdfLUT,
-  ));
-
-  composer.addPass(new TexturePass("IBL Diffuse output", lightBuffer.textures[0]));
-
-  composer.addPass(new SkyPass(cubeMap.texture, camera));
-
-  const ssrPass = new SSRPass(gBuffer, camera, savePass.buffer.texture, lightBuffer.textures[1], brdfLUT);
-  composer.addPass(ssrPass);
-
-  composer.addPass(savePass);
-
-  // composer.addPass(new MotionBlurPass(camera, gBuffer));
-
-  composer.addPass(new BokehPass(gBuffer, camera))
-
-  const bloomPass = new BloomPass(0.1, 0.005);
-  composer.addPass(bloomPass);
-  // composer.addPass(new DebugPass(ssrPass.ssrBuffer.texture));
-  composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
-
-  composer.passes.forEach((pass) => connectPassToTheatre(pass as RenderPass, sheet));
+  const pipeline = await setupPipeline(game)
 
   const animate = () => {
     stats.begin();
     controls.update(clock.getDelta() * 10.0);
     game.world.step();
-    composer.render();
+    pipeline.render();
     debugLines.updateFromBuffer(game.world.debugRender())
-    renderer.render(debugLines.lines, camera);
-    camera.userData.previousViewMatrix.copy(camera.matrixWorldInverse);
+    renderer.render(debugLines.lines, game.mainCamera);
+    game.mainCamera.userData.previousViewMatrix.copy(game.mainCamera.matrixWorldInverse);
     stats.end();
     requestAnimationFrame(animate);
   }
@@ -121,60 +65,6 @@ export const start = async (canvas: HTMLCanvasElement) => {
   animate();
 }
 
-const setupDepthStencilTexture = () => {
-  const depthStencilTexture = new THREE.DepthTexture(
-    window.innerWidth, window.innerHeight,
-    THREE.UnsignedInt248Type,
-    THREE.UVMapping,
-    THREE.ClampToEdgeWrapping,
-    THREE.ClampToEdgeWrapping,
-    THREE.NearestFilter,
-    THREE.NearestFilter,
-    1,
-    THREE.DepthStencilFormat
-  );
-
-  return depthStencilTexture;
-}
-
-/**
- * gBuffer is a render target that stores the following information:
- * 0: Color + Ambient Occlusion
- * 1: Normal + Roughness
- * 2: Position + Metalness
- * 3: Emission
- * 4: Velocity
- */
-const setupGBuffer = (depthTexture: THREE.DepthTexture) => {
-  const gBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-    format: THREE.RGBAFormat,
-    type: THREE.FloatType,
-    minFilter: THREE.NearestFilter,
-    magFilter: THREE.NearestFilter,
-    count: 5,
-    depthBuffer: true,
-    stencilBuffer: true,
-    depthTexture,
-  });
-
-  return gBuffer;
-}
-
-const setupLightBuffer = (depthTexture: THREE.DepthTexture) => {
-  const lightBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-    format: THREE.RGBAFormat,
-    type: THREE.FloatType,
-    minFilter: THREE.NearestFilter,
-    magFilter: THREE.NearestFilter,
-    count: 2,
-    depthBuffer: true,
-    stencilBuffer: true,
-    depthTexture,
-  });
-
-  return lightBuffer;
-}
-
 const setupRenderer = (canvas: HTMLCanvasElement) => {
   const renderer = new THREE.WebGLRenderer({ 
     canvas,
@@ -191,17 +81,6 @@ const setupRenderer = (canvas: HTMLCanvasElement) => {
   return renderer;
 }
 
-const setupComposer = (renderer: THREE.WebGLRenderer, depthStencilTexture: THREE.DepthTexture) => {
-  const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-    stencilBuffer: true,
-    depthBuffer: true,
-    depthTexture: depthStencilTexture,
-    type: THREE.FloatType,
-  })
-  const composer = new EffectComposer(renderer, rt);
-  return composer;
-}
-
 const setupCamera = () => {
   const fowY = 60;
   const aspect = window.innerWidth / window.innerHeight;
@@ -214,7 +93,7 @@ const setupCamera = () => {
     Math.tan(fowY) / 2.0
   );
 
-  camera.position.set(-27.821894295686906, 4.005944047965478, -10.942746348358149)
+  camera.position.add({x: -107.25564700573581, y: 128.02684597731397, z: -104.0210261409503})
 
   camera.userData.previousViewMatrix = new THREE.Matrix4();
 
@@ -226,14 +105,6 @@ const setupControls = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRen
   // controls.movementSpeed = 2;
   // controls.rollSpeed = 0.05;
   return controls;
-}
-
-const loadEquirect = async () => {
-  const texture = await new Promise<THREE.Texture>((resolve) => new RGBELoader(loadingManager).load('belfast_sunset_puresky_2k.hdr', (texture) => {
-    resolve(texture)
-  }));
-  
-  return texture;
 }
 
 const setupStats = () => {

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { fsQuad } from "./utils";
 import { skyShader } from "../shaders/sky";
 
@@ -20,8 +20,8 @@ export class SkyPass extends RenderPass {
     this.gamma = 2.2;
   }
 
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {    
-    renderer.setRenderTarget(readBuffer);
+  pass({ renderer, read }: PassProps): void {    
+    renderer.setRenderTarget(read);
     
     skyShader.uniforms.inverseProjection.value.copy(this.camera.projectionMatrixInverse);
     skyShader.uniforms.inverseViewMatrix.value.copy(this.camera.matrixWorld);

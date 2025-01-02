@@ -1,4 +1,4 @@
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, For, onMount, Show } from "solid-js";
 import { loadingManager, onLoaded, start } from "./game";
 
 export default function Container() {
@@ -8,6 +8,8 @@ export default function Container() {
   const [totalCount, setTotalCount] = createSignal(0);
   const [loading, setLoading] = createSignal(true);
   const [showLoading, setShowLoading] = createSignal(true);
+  const [showTimings, setShowTimings] = createSignal(true)
+  const [timings, setTimings] = createSignal<{ pass: string, timeMs: number }[]>([])
 
   onMount(() => {
     if (!canvas) {
@@ -33,6 +35,14 @@ export default function Container() {
     start(canvas);
   });
 
+  setInterval(() => {
+    const timingData = performance.getEntriesByType("measure")
+    setTimings(timingData.map(p => ({
+      pass: p.name,
+      timeMs: p.duration
+    })))
+  }, 1000)
+
   return (
     <main>
       <canvas ref={canvas} width="800" height="600"></canvas>
@@ -51,6 +61,26 @@ export default function Container() {
             <p>{loadedCount()}/{totalCount()}</p>
             <p>{currentItem()}</p>
           </div>
+        </div>
+      </Show>
+      <Show when={showTimings()}>
+        <div class="absolute right-10 top-[40vh]">
+          <table class="text-xs">
+            <thead>
+              <tr>
+                <th>Pass</th>
+                <th>Time (ms)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <For each={timings()}>{(t) => (
+                <tr>
+                  <td>{t.pass}</td>
+                  <td class="font-mono">{t.timeMs.toFixed(2)}</td>
+                </tr>
+              )}</For>
+            </tbody>
+          </table>
         </div>
       </Show>
     </main>

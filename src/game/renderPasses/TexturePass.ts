@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { fsQuad } from "./utils";
 import { copyShader } from "../shaders/copy";
 
@@ -21,8 +21,8 @@ export class TexturePass extends RenderPass {
     this.intensity = intensity;
   }
 
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
-    renderer.setRenderTarget(readBuffer);
+  pass({ renderer, read }: PassProps): void {
+    renderer.setRenderTarget(read);
 
     if (this.mode === "additive") {
       copyShader.blending = THREE.AdditiveBlending;

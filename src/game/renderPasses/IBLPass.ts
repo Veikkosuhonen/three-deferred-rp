@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { iblShader } from "../shaders";
 import { fsQuad } from "./utils";
 
@@ -38,7 +38,7 @@ export class IBLPass extends RenderPass {
     iblShader.uniforms.brdfLUT.value = brdfLUT;
   }
 
-  render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, _readBuffer: THREE.WebGLRenderTarget): void {
+  pass({ renderer }: PassProps): void {
     renderer.setRenderTarget(this.lightBuffer);
   
     iblShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);

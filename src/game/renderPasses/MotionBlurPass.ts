@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { RenderPass } from "./RenderPass";
+import { PassProps, RenderPass } from "./RenderPass";
 import { fsQuad } from "./utils";
 import { motionBlurShader } from "../shaders/motionBlur";
 
@@ -14,11 +14,11 @@ export class MotionBlurPass extends RenderPass {
     motionBlurShader.uniforms.gVelocity.value = gBuffer.textures[4];
   }
 
-  render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
-    renderer.setRenderTarget(writeBuffer);
+  pass({ renderer, read, write }: PassProps): void {
+    renderer.setRenderTarget(write);
     motionBlurShader.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
     motionBlurShader.uniforms.amount.value = this.amount;
-    motionBlurShader.uniforms.src.value = readBuffer.texture
+    motionBlurShader.uniforms.src.value = read.texture
     fsQuad.material = motionBlurShader;
     fsQuad.render(renderer);
   }
