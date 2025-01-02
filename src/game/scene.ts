@@ -12,6 +12,8 @@ export const setupScene = (game: Game) => {
   game.scene.add(grid.generate())
 
   game.scene.traverse(obj => configureSceneObjects(obj, game))
+
+  console.log(game.scene)
 }
 
 const createScene0 = (game: Game) => {
@@ -32,7 +34,7 @@ const createScene0 = (game: Game) => {
 
   box.position.set(0, 3, 10);
 
-  box.userData.previousWorldMatrix = new THREE.Matrix4();
+  box.userData.previousWorldMatrix = box.matrixWorld;
   box.onAfterRender = () => {
     box.userData.previousWorldMatrix.copy(box.matrixWorld);
   }
@@ -43,11 +45,6 @@ const createScene0 = (game: Game) => {
 }
 
 const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
-
-  object.userData.previousWorldMatrix = new THREE.Matrix4();
-  object.onAfterRender = () => {
-    object.userData.previousWorldMatrix.copy(object.matrixWorld);
-  }
 
   if ("t_id" in object.userData) {
     connectObjectToTheatre(object, game.sheet);
@@ -127,18 +124,16 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
     object.userData.collider = game.world.createCollider(colliderDesc, object.userData.body);
   }
 
-  if (object instanceof THREE.Mesh) {
-    
-    if (object.material instanceof THREE.MeshPhysicalMaterial) {
-      // console.log(object.material)
+  object.userData.previousWorldMatrix = object.matrixWorld;
+  if (object.userData.isDynamic) {
+    object.onAfterRender = () => {
+      object.userData.previousWorldMatrix.copy(object.matrixWorld);
     }
+  }
 
-    const variantKey = getVariantKey(!!object.material.map, !!object.material.normalMap, !!object.material.roughnessMap, !!object.material.emissiveMap);
-    // console.log(variantKey)
+  if (object instanceof THREE.Mesh || object instanceof THREE.InstancedMesh) {
+    const variantKey = getVariantKey(!!object.material.map, !!object.material.normalMap, !!object.material.roughnessMap, !!object.material.emissiveMap, object instanceof THREE.InstancedMesh);
     const shader = gBufferShaderVariants[variantKey];
-    // console.log(shader)
-
-    // console.log(object.material);
 
     shader.userData.materialKeys.forEach((key: string) => {
       const materialProperty = (object.material as Record<string, any>)[key];
@@ -163,7 +158,8 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
       shader.userData.materialKeys.forEach((key: string) => {
         shader.uniforms[key].value = object.userData[key]
       })
-      shader.uniformsNeedUpdate = true;
+
+      shader.uniformsNeedUpdate = true
     }
   }
 

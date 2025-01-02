@@ -25,22 +25,29 @@ out vec3 vNormal;
 #endif
 
 void main() {
+  #ifdef USE_INSTANCING
+  mat4 mMatrix = modelMatrix * instanceMatrix;
+  mat4 mvMatrix = viewMatrix * mMatrix;
+  #else
+  mat4 mMatrix = modelMatrix;
+  mat4 mvMatrix = modelViewMatrix;
+  #endif
+
   #ifdef USE_NORMAL_MAP
-  vec3 T = normalize(vec3(viewMatrix * modelMatrix * vec4(tangent,   0.0)));
-  vec3 N = normalize(vec3(viewMatrix * modelMatrix * vec4(normal,    0.0)));
+  vec3 T = normalize(vec3(mvMatrix * vec4(tangent,   0.0)));
+  vec3 N = normalize(vec3(mvMatrix * vec4(normal,    0.0)));
   // re-orthogonalize T with respect to N
   T = normalize(T - dot(T, N) * N);
   // then retrieve perpendicular vector B with the cross product of T and N
   vec3 B = cross(N, T);
   TBN = mat3(T, B, N);
   #else
-  vNormal = (viewMatrix * modelMatrix * vec4(normal, 0.0)).xyz;
+  vNormal = (mvMatrix * vec4(normal, 0.0)).xyz;
   #endif
 
   vUv = uv;
 
-  vec4 posWS = modelMatrix * vec4(position, 1.0);
-  vec4 posVS = viewMatrix * posWS;
+  vec4 posVS = mvMatrix * vec4(position, 1.0);
   vPosition = posVS.xyz;
 
   vec4 previousPosWS = previousWorldMatrix * vec4(position, 1.0);
@@ -140,60 +147,63 @@ void main() {
 }
 `;
 
-export const getVariantKey = (useMap: boolean, useNormalMap: boolean, useOrmMap: boolean, useEmissionMap: boolean) => {
-  return (useMap ? 8 : 0) | (useNormalMap ? 4 : 0) | (useOrmMap ? 2 : 0) | (useEmissionMap ? 1 : 0);
+export const getVariantKey = (useMap: boolean, useNormalMap: boolean, useOrmMap: boolean, useEmissionMap: boolean, useInstancing: boolean) => {
+  return (useInstancing ? 16 : 0) | (useMap ? 8 : 0) | (useNormalMap ? 4 : 0) | (useOrmMap ? 2 : 0) | (useEmissionMap ? 1 : 0);
 }
 
 export const gBufferShaderVariants: Record<number, THREE.ShaderMaterial> = {};
 
 (() => {
 
-  // Four bits for USE_MAP, USE_NORMAL_MAP, USE_ORM_MAP, USE_EMISSION_MAP
+  // Five bits for USE_MAP, USE_NORMAL_MAP, USE_ORM_MAP, USE_EMISSION_MAP, USE_INSTANCING
   for (let use_map = 0; use_map < 2; use_map++) {
     for (let use_normal_map = 0; use_normal_map < 2; use_normal_map++) {
       for (let use_orm_map = 0; use_orm_map < 2; use_orm_map++) {
         for (let use_emission_map = 0; use_emission_map < 2; use_emission_map++) {
-          const key = getVariantKey(!!use_map, !!use_normal_map, !!use_orm_map, !!use_emission_map);
+          for (let use_instancing = 0; use_instancing < 2; use_instancing++) {
+            const key = getVariantKey(!!use_map, !!use_normal_map, !!use_orm_map, !!use_emission_map, !!use_instancing);
 
-          const defines: Record<string, string> = {};
-          const materialKeys: string[] = [];
-          const uniforms: Record<string, THREE.IUniform> = {
-            previousWorldMatrix: { value: new THREE.Matrix4() },
-            previousViewMatrix: { value: new THREE.Matrix4() },
-          };
+            const defines: Record<string, string> = {};
+            const materialKeys: string[] = [];
+            const uniforms: Record<string, THREE.IUniform> = {
+              previousWorldMatrix: { value: new THREE.Matrix4() },
+              previousViewMatrix: { value: new THREE.Matrix4() },
+            };
 
-          const addMaterialKey = (key: string, value: any) => {
-            materialKeys.push(key);
-            uniforms[key] = { value };
+            const addMaterialKey = (key: string, value: any) => {
+              materialKeys.push(key);
+              uniforms[key] = { value };
+            }
+
+            if (use_map) {          defines.USE_MAP = "";          addMaterialKey("map", null) }          else { addMaterialKey("color", new THREE.Color()); }
+            if (use_normal_map) {   defines.USE_NORMAL_MAP = "";   addMaterialKey("normalMap", null) }
+            if (use_orm_map) {      defines.USE_ORM_MAP = "";      addMaterialKey("roughnessMap", null) } else { addMaterialKey("roughness", 0.001); addMaterialKey("metalness", 0.0); }
+            if (use_emission_map) { defines.USE_EMISSION_MAP = ""; addMaterialKey("emissiveMap", null) }  else { addMaterialKey("emissive", new THREE.Color()); }
+            if (use_instancing) { defines.USE_INSTANCING = ""; }
+            addMaterialKey("emissiveIntensity", 1.0);
+
+            gBufferShaderVariants[key] = new THREE.ShaderMaterial({
+              vertexShader: gBufferShaderVS,
+              fragmentShader: gBufferShaderFS,
+              side: THREE.FrontSide,
+              glslVersion: "300 es",
+              depthWrite: true,
+              stencilWrite: true,
+              stencilFunc: THREE.AlwaysStencilFunc,
+              stencilZPass: THREE.ReplaceStencilOp,
+              stencilFail: THREE.ReplaceStencilOp,
+              stencilZFail: THREE.ReplaceStencilOp,
+              stencilFuncMask: 0xff,
+              stencilWriteMask: 0xff,
+              stencilRef: 1,
+              defines,
+              uniforms,
+              userData: {
+                materialKeys,
+              },
+              name: Object.keys(defines).join(", "),
+            });
           }
-
-          if (use_map) {          defines.USE_MAP = "";          addMaterialKey("map", null) }          else { addMaterialKey("color", new THREE.Color()); }
-          if (use_normal_map) {   defines.USE_NORMAL_MAP = "";   addMaterialKey("normalMap", null) }
-          if (use_orm_map) {      defines.USE_ORM_MAP = "";      addMaterialKey("roughnessMap", null) } else { addMaterialKey("roughness", 0.001); addMaterialKey("metalness", 0.0); }
-          if (use_emission_map) { defines.USE_EMISSION_MAP = ""; addMaterialKey("emissiveMap", null) }  else { addMaterialKey("emissive", new THREE.Color()); }
-          addMaterialKey("emissiveIntensity", 1.0);
-
-          gBufferShaderVariants[key] = new THREE.ShaderMaterial({
-            vertexShader: gBufferShaderVS,
-            fragmentShader: gBufferShaderFS,
-            side: THREE.FrontSide,
-            glslVersion: "300 es",
-            depthWrite: true,
-            stencilWrite: true,
-            stencilFunc: THREE.AlwaysStencilFunc,
-            stencilZPass: THREE.ReplaceStencilOp,
-            stencilFail: THREE.ReplaceStencilOp,
-            stencilZFail: THREE.ReplaceStencilOp,
-            stencilFuncMask: 0xff,
-            stencilWriteMask: 0xff,
-            stencilRef: 1,
-            defines,
-            uniforms,
-            userData: {
-              materialKeys,
-            },
-            name: Object.keys(defines).join(", "),
-          });
         }
       }
     }
