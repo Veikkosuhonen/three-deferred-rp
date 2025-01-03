@@ -101,6 +101,9 @@ const setupCamera = () => {
 
 const setupControls = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) => {
   const controls = new MapControls(camera, renderer.domElement);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.1;
+  controls.enableDamping = true;
   // controls.movementSpeed = 2;
   // controls.rollSpeed = 0.05;
   return controls;

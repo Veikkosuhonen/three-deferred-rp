@@ -8,14 +8,14 @@ type GeneratorResult = {
 }
 
 export const grid = {
-  width: 100,
-  height: 100,
-  cellWidth: 9,
-  cellHeight: 9,
+  width: 200,
+  height: 200,
+  cellWidth: 8,
+  cellHeight: 8,
 
   generate(): GeneratorResult {
     const group = new THREE.Group()
-    group.position.set(-this.cellWidth * this.width / 2, 0, -this.cellHeight * this.height / 2)
+    group.position.set(-this.cellWidth * this.width / 4, 0, -this.cellHeight * this.height / 4)
 
     for (let i = 0; i < this.height; i++) {
       for (let j = 0; j < this.width; j++) {
@@ -170,7 +170,7 @@ export const grid = {
     const b = this.basicBlock()
     const b1 = this.boxInstance()
     b1.scale.set(0.8 * this.cellWidth, 10.0 + 20 * Math.random(), 0.8 * this.cellHeight)
-    b1.position.add({ x: 0, y: 15, z: 0 })
+    b1.position.add({ x: 0, y: 10, z: 0 })
 
     b.add(b1)
 
@@ -181,13 +181,14 @@ export const grid = {
 
     const b = new THREE.Object3D()
     const pole = this.cylinderInstance()
-    pole.scale.set(0.5, 10.0, 0.5)
+    pole.scale.set(0.4, 10.0, 0.4)
     pole.position.add({ x: 0.0, y: 10.0, z: 0.0 })
 
     const rnd = Math.random()
     const color = rnd > 0.5 ? 0xffffff : 0xffccaa
 
     const lamp = this.sphereInstance()
+    lamp.scale.setScalar(0.5)
     lamp.position.add({ x: 0, y: 15.0, z: 0.0 })
     b.add(lamp)
 
