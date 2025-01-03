@@ -16,4 +16,4 @@ Maybe will make a demo with this
 
 ![out](https://github.com/user-attachments/assets/ff4992de-21d6-4ffe-a014-891c235b28ce)
 
-Easy 10 000+ lights in real time
+Easy 10 000+ lights in <2ms on M1 Pro
