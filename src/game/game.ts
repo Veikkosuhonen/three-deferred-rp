@@ -33,6 +33,9 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const pipeline = await setupPipeline(game)
 
   const animate = () => {
+    performance.clearMarks('start-frame');
+    performance.mark('start-frame')
+
     stats.begin();
     controls.update(clock.getDelta() * 10.0);
     game.world.step();
@@ -41,8 +44,14 @@ export const start = async (canvas: HTMLCanvasElement) => {
     renderer.render(debugLines.lines, game.mainCamera);
     game.mainCamera.userData.previousViewMatrix.copy(game.mainCamera.matrixWorldInverse);
     stats.end();
-    requestAnimationFrame(animate);
+
+    performance.clearMarks('end-frame');
+    performance.mark('end-frame');
+    performance.clearMeasures('frame');
+    performance.measure('frame', 'start-frame', 'end-frame');
   }
+
+  renderer.setAnimationLoop(animate);
 
   const resize = () => {
     const width = window.innerWidth;
@@ -60,8 +69,6 @@ export const start = async (canvas: HTMLCanvasElement) => {
       console.log(camera.position);
     }
   })
-
-  animate();
 }
 
 const setupRenderer = (canvas: HTMLCanvasElement) => {
