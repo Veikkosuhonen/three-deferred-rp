@@ -36,7 +36,7 @@ export const setupPipeline = async (game: Game) => {
   const ssaoPass = new SSAOPass(gBuffer, game.mainCamera);
   composer.addPass(ssaoPass);
 
-  const lightingPass = new LightPass(game.scene, game.mainCamera, gBuffer, lightBuffer);
+  const lightingPass = new LightPass(game.lights, game.mainCamera, gBuffer, lightBuffer);
   composer.addPass(lightingPass);
 
   composer.addPass(new IBLPass(

@@ -3,13 +3,22 @@ import * as THREE from "three";
 const lightningShaderVS = /* glsl */ `
 precision highp float;
 
-in vec3 position;
+in mat4 instanceMatrix;
+in vec3 color;
+in float intensity;
 
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
+out vec3 lightPositionVS;
+out vec3 vColor;
 
 void main() {
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  mat4 mMatrix = modelMatrix * instanceMatrix;
+  mat4 mvMatrix = viewMatrix * mMatrix;
+
+  vColor = color * intensity;
+
+  lightPositionVS = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+  gl_Position = projectionMatrix * mvMatrix * vec4(position, 1.0);
 }
 `;
 
@@ -19,7 +28,6 @@ precision highp float;
 const float PI = 3.14159265359;
 
 uniform vec2 u_resolution;
-uniform vec3 u_camPos;
 
 uniform sampler2D gColorAo;
 uniform sampler2D gNormalRoughness;
@@ -28,8 +36,8 @@ uniform sampler2D gPositionMetalness;
 layout (location = 0) out vec4 diffuseColorOut;
 layout (location = 1) out vec4 specularColorOut;
 
-uniform vec3 lightColor;
-uniform vec3 lightPositionVS;
+in vec3 lightPositionVS;
+in vec3 vColor;
 
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
   float a      = roughness*roughness;
@@ -96,7 +104,7 @@ void main() {
 
   float dist = length(lightPositionVS - position);
   float attenuation = 1.0 / (1.0 + dist * dist);
-  vec3 radiance = lightColor * attenuation;
+  vec3 radiance = vColor * attenuation;
 
   vec3 kS = F; // Specular contribution, aka energy of reflection
   vec3 kD = vec3(1.0) - kS; // Diffuse contribution
@@ -110,7 +118,7 @@ void main() {
 }
 `;
 
-export const lightningShader = new THREE.RawShaderMaterial({
+export const lightningShader = new THREE.ShaderMaterial({
   vertexShader: lightningShaderVS,
   fragmentShader: lightningShaderFS,
   side: THREE.BackSide,
@@ -134,10 +142,9 @@ export const lightningShader = new THREE.RawShaderMaterial({
     gNormalRoughness: { value: null },
     gPositionMetalness: { value: null },
     u_resolution: { value: new THREE.Vector2() },
-    u_camPos: { value: new THREE.Vector3() },
     lightPositionVS: { value: new THREE.Vector3() },
     lightColor: { value: new THREE.Color() },
-    modelViewMatrix: { value: new THREE.Matrix4() },
-    projectionMatrix: { value: new THREE.Matrix4() },
+    //modelViewMatrix: { value: new THREE.Matrix4() },
+    //projectionMatrix: { value: new THREE.Matrix4() },
   },
 });

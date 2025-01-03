@@ -9,39 +9,11 @@ import { basicRtMaterial } from './materials/basicRtMaterial';
 import { grid } from './world/blocks';
 
 export const setupScene = (game: Game) => {
-  game.scene.add(grid.generate())
+  const { props, lights } = grid.generate()
+  game.scene.add(props)
+  game.lights.add(lights)
 
   game.scene.traverse(obj => configureSceneObjects(obj, game))
-
-  console.log(game.scene)
-}
-
-const createScene0 = (game: Game) => {
-  const scene = new THREE.Scene()
-
-  const gltfLoader = new GLTFLoader(game.loadingManager);
-
-  gltfLoader.load("cliff/cliffscene.gltf", (gltf) => {
-    const root = gltf.scene;
-    root.traverse((obj) => configureSceneObjects(obj, game))
-    scene.add(root);
-  });
-
-  const box = new THREE.Mesh(
-    new THREE.BoxGeometry(10, 10, 10),
-    basicRtMaterial,
-  );
-
-  box.position.set(0, 3, 10);
-
-  box.userData.previousWorldMatrix = box.matrixWorld;
-  box.onAfterRender = () => {
-    box.userData.previousWorldMatrix.copy(box.matrixWorld);
-  }
-
-  scene.add(box);
-
-  return scene;
 }
 
 const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
@@ -160,13 +132,6 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
       })
 
       shader.uniformsNeedUpdate = true
-    }
-  }
-
-  if (object instanceof THREE.Light) {
-    if (object instanceof THREE.PointLight) {
-      object.distance = 2 * object.intensity;
-      // console.log(object.name, object)
     }
   }
 }

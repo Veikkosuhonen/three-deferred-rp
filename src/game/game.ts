@@ -20,8 +20,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   const renderer = setupRenderer(canvas);
   const camera = setupCamera();
-  const scene = new THREE.Scene()
-  const game = new Game(renderer, scene, camera, sheet, loadingManager);
+  const game = new Game(renderer, camera, sheet, loadingManager);
 
   setupScene(game)
 
@@ -85,7 +84,7 @@ const setupCamera = () => {
   const fowY = 60;
   const aspect = window.innerWidth / window.innerHeight;
   const near = 0.1;
-  const far = 1000;
+  const far = 10_000;
   const camera = new THREE.PerspectiveCamera(fowY, aspect, near, far);
 
   camera.userData.halfSizeNearPlane = new THREE.Vector2(
