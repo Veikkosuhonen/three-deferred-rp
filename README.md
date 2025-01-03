@@ -1,6 +1,16 @@
-# Testing deferred rendering in THREE js
+# Deferred rendering
 
 This allows for all kinds of cool effects to be composed
+
+So far got at least:
+
+- Deferred lighting
+- SSAO
+- Image-based lighting
+- SSR
+- Motion blur
+- Bokeh
+- Bloom
 
 Maybe will make a demo with this
 
