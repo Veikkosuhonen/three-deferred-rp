@@ -14,6 +14,6 @@ So far got at least:
 
 Maybe will make a demo with this
 
-![out](https://github.com/user-attachments/assets/aaf8056e-7e10-4342-a375-9156e8f9d1db)
+![out](https://github.com/user-attachments/assets/ff4992de-21d6-4ffe-a014-891c235b28ce)
 
 Easy 10 000+ lights in real time
