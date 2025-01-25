@@ -15,6 +15,7 @@ import { cubeToIrradiance, equirectToCube, equirectToPrefilter, generateBrdfLUT 
 import { connectPassToTheatre } from './theatreThree';
 import { Game } from './gameState';
 import { DebugPass } from './renderPasses/DebugPass';
+import { FogPass } from './renderPasses/FogPass';
 
 export const setupPipeline = async (game: Game) => {
 
@@ -51,6 +52,8 @@ export const setupPipeline = async (game: Game) => {
 
   const ssrPass = new SSRPass(gBuffer, game.mainCamera, savePass.buffer.texture, lightBuffer.textures[1], brdfLUT);
   composer.addPass(ssrPass);
+
+  composer.addPass(new FogPass(gBuffer, game.mainCamera));
 
   composer.addPass(savePass);
 

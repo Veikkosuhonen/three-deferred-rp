@@ -1,11 +1,11 @@
 import * as THREE from 'three'
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { setupScene } from './scene';
-import { MapControls } from 'three/examples/jsm/Addons.js';
+import { MapControls, FirstPersonControls } from 'three/examples/jsm/Addons.js';
 import studio from '@theatre/studio'
 import { getProject } from '@theatre/core'
 import { Game } from './gameState';
-import { createLines } from './lineRenderer';
+// import { createLines } from './lineRenderer';
 import theatreProject from "./demo project.theatre-project-state.json";
 import { setupPipeline } from './pipeline';
 
@@ -26,7 +26,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   const stats = setupStats();
 
-  const debugLines = createLines();
+  // const debugLines = createLines();
   const clock = new THREE.Clock();
   const controls = setupControls(game.mainCamera, renderer);
 
@@ -37,11 +37,10 @@ export const start = async (canvas: HTMLCanvasElement) => {
     performance.mark('start-frame')
 
     stats.begin();
-    controls.update(clock.getDelta() * 10.0);
-    game.world.step();
+    controls.update(clock.getDelta() * 20.0);
     pipeline.render();
-    debugLines.updateFromBuffer(game.world.debugRender())
-    renderer.render(debugLines.lines, game.mainCamera);
+    // debugLines.updateFromBuffer(game.world.debugRender())
+    // renderer.render(debugLines.lines, game.mainCamera);
     game.mainCamera.userData.previousViewMatrix.copy(game.mainCamera.matrixWorldInverse);
     stats.end();
 

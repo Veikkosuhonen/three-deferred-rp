@@ -1,4 +1,3 @@
-import RAPIER from "@dimforge/rapier3d";
 import { ISheet } from "@theatre/core";
 import * as THREE from "three";
 
@@ -7,7 +6,6 @@ export class Game {
   scene: THREE.Scene;
   lights: THREE.Scene;
   mainCamera: THREE.PerspectiveCamera
-  world: RAPIER.World;
   sheet: ISheet;
   loadingManager: THREE.LoadingManager;
 
@@ -18,7 +16,5 @@ export class Game {
     this.mainCamera = mainCamera
     this.sheet = sheet;
     this.loadingManager = loadingManager
-
-    this.world = new RAPIER.World(new RAPIER.Vector3(0, -9.81, 0));
   }
 }

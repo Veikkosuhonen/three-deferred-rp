@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import { generate } from "./city"
 
 export type BlockGen = () => THREE.Object3D
 
@@ -8,20 +9,18 @@ type GeneratorResult = {
 }
 
 export const grid = {
-  width: 200,
-  height: 200,
+  width: 1000,
+  height: 1000,
   cellWidth: 8,
   cellHeight: 8,
 
   generate(): GeneratorResult {
     const group = new THREE.Group()
-    group.position.set(-this.cellWidth * this.width / 4, 0, -this.cellHeight * this.height / 4)
+    group.position.set(-this.width/4, 0, -this.height/4)
 
-    for (let i = 0; i < this.height; i++) {
-      for (let j = 0; j < this.width; j++) {
-        group.add(this.generateCell(i, j))
-      }
-    }
+    const { blocks, roads } = generate(this.width, this.height)
+    blocks.forEach(block => group.add(block.toObject3D()))
+    roads.forEach(road => group.add(road.toObject3D())) 
 
     const lightDatas: THREE.PointLight[] = []
 
@@ -50,7 +49,7 @@ export const grid = {
       }
 
       if (obj instanceof THREE.PointLight) {
-        obj.scale.setScalar(2 * obj.intensity)
+        obj.scale.setScalar(3 * obj.intensity)
         obj.updateMatrixWorld()
 
         lightDatas.push(obj)
@@ -129,92 +128,4 @@ export const grid = {
 
     return lights
   },
-
-  generateCell(i: number, j: number): THREE.Object3D {
-    const rnd = Math.random() * 3
-    let block: THREE.Object3D;
-
-    if (rnd > 2) {
-      block = this.houseBlock()
-    } else if (rnd > 1) {
-      block = this.lampPostBlock()
-    } else {
-      block = this.basicBlock()
-    }
-
-    block.position.set(i * this.cellHeight, 0.0, j * this.cellWidth);
-
-    return block
-  },
-
-  basicBlock(): THREE.Object3D {
-    const b = this.boxInstance()
-
-    const b1 = b.clone()
-    b1.scale.set(this.cellWidth, 10.0, this.cellHeight)
-    b1.scale.multiplyScalar(0.9)
-    b1.position.add({ x: 0, y: 1, z: 0 })
-
-    b.add(b1)
-
-    return b
-  },
-
-  lampPostBlock(): THREE.Object3D {
-    const b = this.basicBlock()
-    b.add(this.lampPost())
-    return b;
-  },
-
-  houseBlock(): THREE.Object3D {
-    const b = this.basicBlock()
-    const b1 = this.boxInstance()
-    b1.scale.set(0.8 * this.cellWidth, 10.0 + 20 * Math.random(), 0.8 * this.cellHeight)
-    b1.position.add({ x: 0, y: 10, z: 0 })
-
-    b.add(b1)
-
-    return b
-  },
-
-  lampPost(): THREE.Object3D {
-
-    const b = new THREE.Object3D()
-    const pole = this.cylinderInstance()
-    pole.scale.set(0.4, 10.0, 0.4)
-    pole.position.add({ x: 0.0, y: 10.0, z: 0.0 })
-
-    const rnd = Math.random()
-    const color = rnd > 0.5 ? 0xffffff : 0xffccaa
-
-    const lamp = this.sphereInstance()
-    lamp.scale.setScalar(0.5)
-    lamp.position.add({ x: 0, y: 15.0, z: 0.0 })
-    b.add(lamp)
-
-    const light = new THREE.PointLight(color, 15.0)
-    lamp.add(light)
-
-    b.add(pole)
-
-    return b
-  },
-
-  boxInstance(): THREE.Object3D {
-    const b = new THREE.Object3D()
-    b.userData.box = true
-    return b
-  },
-
-  sphereInstance(): THREE.Object3D {
-    const b = new THREE.Object3D()
-    b.userData.sphere = true
-    return b
-  },
-
-  cylinderInstance(): THREE.Object3D {
-    const b = new THREE.Object3D()
-    b.userData.cylinder = true
-    return b
-  }
 }
