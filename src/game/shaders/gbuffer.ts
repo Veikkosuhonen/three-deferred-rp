@@ -7,6 +7,9 @@ import * as THREE from 'three';
 const gBufferShaderVS = /* glsl */ `
 precision highp float;
 
+#ifdef USE_INSTANCING
+in vec3 color;
+#endif
 layout (location = 3) in vec3 tangent;
 
 uniform mat4 previousWorldMatrix;
@@ -14,6 +17,7 @@ uniform mat4 previousViewMatrix;
 
 out vec2 vUv;
 out vec3 vPosition;
+out vec3 vColor;
 
 out vec4 vPositionCS;
 out vec4 vPreviousPositionCS;
@@ -57,6 +61,10 @@ void main() {
   gl_Position = projectionMatrix * posVS;
 
   vPositionCS = gl_Position;
+
+  #ifdef USE_INSTANCING
+  vColor = color;
+  #endif
 }
 `;
 
@@ -73,6 +81,7 @@ in vec3 vPosition;
 in vec2 vUv;
 in vec4 vPositionCS;
 in vec4 vPreviousPositionCS;
+in vec3 vColor;
 
 #ifdef USE_NORMAL_MAP
 in mat3 TBN;
@@ -108,7 +117,11 @@ void main() {
   #ifdef USE_MAP
   vec3 diffuse = texture(map, vUv).rgb;
   #else
+  #ifdef USE_INSTANCING
+  vec3 diffuse = vColor;
+  #else
   vec3 diffuse = color;
+  #endif
   #endif
 
   #ifdef USE_NORMAL_MAP

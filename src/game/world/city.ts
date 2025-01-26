@@ -38,6 +38,9 @@ class Road {
   toObject3D() {
     const obj = new THREE.Object3D();
     const b = boxInstance()
+
+    b.material.color.multiplyScalar(0.3 + 0.1 * Math.random());
+
     const center = new THREE.Vector2().addVectors(this.start, this.end).multiplyScalar(0.5);
     b.position.set(center.x, 0, center.y);
     b.scale.set(
@@ -118,7 +121,7 @@ class CityBlock {
     for (let i = 0; i < numBuildingsW; i++) {
       for (let j = 0; j < numBuildingsH; j++) {
 
-        let roadLanes = 0;
+        let roadLanes = 2;
         if (i === 0) {
           roadLanes = this.left?.lanes || 0;
         } else if (i === numBuildingsW - 1) {
@@ -134,8 +137,12 @@ class CityBlock {
           this.topLeft.x + SIDEWALK_WIDTH + offsetW * i + 0.5 * offsetW,
           this.topLeft.y + SIDEWALK_WIDTH + offsetH * j + 0.5 * offsetH,
         );
+
         const building = boxInstance();
-        const height = 5 + 5 * roadLanes * Math.random();
+
+        building.material.color.multiplyScalar(0.5 + 0.5 * Math.random());
+
+        const height = 5 + 6 * roadLanes * Math.random();
         building.position.set(center.x, height / 2, center.y);
         building.scale.set(offsetW, height, offsetH);
         buildings.push(building);

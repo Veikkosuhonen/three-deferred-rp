@@ -98,7 +98,7 @@ const setupCamera = () => {
     Math.tan(fowY) / 2.0
   );
 
-  camera.position.add({x: -107.25564700573581, y: 128.02684597731397, z: -104.0210261409503})
+  camera.position.add({x: 400, y: 50, z: 400})
 
   camera.userData.previousViewMatrix = new THREE.Matrix4();
 
@@ -107,6 +107,7 @@ const setupCamera = () => {
 
 const setupControls = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) => {
   const controls = new MapControls(camera, renderer.domElement);
+  controls.target.set(500, 0, 500);
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.1;
   controls.enableDamping = true;

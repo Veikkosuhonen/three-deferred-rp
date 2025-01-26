@@ -1,5 +1,7 @@
 import * as THREE from "three"
 import { generate } from "./city"
+import { generateHighway } from "./highway"
+import { SceneObject } from "./objects"
 
 export type BlockGen = () => THREE.Object3D
 
@@ -11,22 +13,26 @@ type GeneratorResult = {
 export const grid = {
   width: 1000,
   height: 1000,
-  cellWidth: 8,
-  cellHeight: 8,
 
   generate(): GeneratorResult {
+    console.time('generate')
+
     const group = new THREE.Group()
-    group.position.set(-this.width/4, 0, -this.height/4)
+    // group.position.set(-this.width/4, 0, -this.height/4)
 
     const { blocks, roads } = generate(this.width, this.height)
     blocks.forEach(block => group.add(block.toObject3D()))
     roads.forEach(road => group.add(road.toObject3D())) 
 
+    const highway = generateHighway(this.width, this.height)
+    highway.position.set(0, 20, 0)
+    group.add(highway)
+
     const lightDatas: THREE.PointLight[] = []
 
-    const boxMatrices: THREE.Matrix4[] = []
-    const sphereMatrices: THREE.Matrix4[] = []
-    const cylinderMatrices: THREE.Matrix4[] = []
+    const boxes: SceneObject[] = []
+    const spheres: SceneObject[] = []
+    const cylinders: SceneObject[] = []
 
     const toRemove: THREE.Object3D[] = []
   
@@ -35,11 +41,11 @@ export const grid = {
       let remove = true
     
       if (obj.userData.box) {
-        boxMatrices.push(obj.matrixWorld)
+        boxes.push(obj as SceneObject)
       } else if (obj.userData.sphere) {
-        sphereMatrices.push(obj.matrixWorld)
+        spheres.push(obj as SceneObject)
       } else if (obj.userData.cylinder) {
-        cylinderMatrices.push(obj.matrixWorld)
+        cylinders.push(obj as SceneObject)
       } else {
         remove = false
       }
@@ -60,27 +66,24 @@ export const grid = {
 
     group.add(this.buildInstanced(
       new THREE.BoxGeometry(),
-      new THREE.MeshPhysicalMaterial(),
-      boxMatrices,
+      boxes,
     ))
 
     group.add(this.buildInstanced(
       new THREE.SphereGeometry(),
-      new THREE.MeshPhysicalMaterial({
-        emissiveIntensity: 8.0, emissive: 0xffffff,
-      }),
-      sphereMatrices,
+      spheres,
     ))
 
     group.add(this.buildInstanced(
       new THREE.CylinderGeometry(),
-      new THREE.MeshPhysicalMaterial(),
-      cylinderMatrices
+      cylinders
     ))
 
     const lights = new THREE.Group()
     lights.position.copy(group.position)
     lights.add(this.buildInstancedLights(lightDatas))
+
+    console.timeEnd('generate')
 
     return {
       props: group,
@@ -88,15 +91,30 @@ export const grid = {
     }
   },
 
-  buildInstanced(geom: THREE.BufferGeometry, mat: THREE.MeshPhysicalMaterial, matrices: THREE.Matrix4[]): THREE.InstancedMesh {
-    const instanced = new THREE.InstancedMesh(geom, mat, matrices.length)
-    for (let i = 0; i < matrices.length; i++) {
-      const m = matrices[i];
-      instanced.setMatrixAt(i, m)
+  buildInstanced(geom: THREE.BufferGeometry, objs: SceneObject[]): THREE.Mesh {
+    const instanced = new THREE.InstancedBufferGeometry()
+    instanced.index = geom.index
+    instanced.attributes.position = geom.attributes.position
+    instanced.attributes.normal = geom.attributes.normal
+
+    const matrixArray = new Float32Array(objs.length * 16)
+    const colorArray = new Float32Array(objs.length * 3)
+
+    for (let i = 0; i < objs.length; i++) {
+      objs[i].matrixWorld.toArray(matrixArray, i * 16)
+      objs[i].material.color.toArray(colorArray, i * 3)
     }
-    instanced.instanceMatrix.setUsage(THREE.StaticDrawUsage);
-    instanced.instanceMatrix.needsUpdate = true;
-    return instanced
+
+    instanced.setAttribute('instanceMatrix', new THREE.InstancedBufferAttribute(matrixArray, 16))
+    instanced.setAttribute('color', new THREE.InstancedBufferAttribute(colorArray, 3))
+
+    const mesh = new THREE.Mesh(instanced, new THREE.MeshPhysicalMaterial())
+
+    mesh.userData.instanced = true;
+
+    mesh.frustumCulled = false
+
+    return mesh
   },
 
   buildInstancedLights(lightDatas: THREE.PointLight[]): THREE.Mesh {

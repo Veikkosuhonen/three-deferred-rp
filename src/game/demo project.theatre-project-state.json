@@ -4,26 +4,26 @@
       "staticOverrides": {
         "byObject": {
           "BloomPass": {
-            "bloomStrength": 0.1,
+            "bloomStrength": 0.05,
             "filterRadius": 0.0049999999999999906
           },
           "SSAOPass": {
             "scale": 1
           },
           "FinalLightPass": {
-            "irradianceIntensity": 1.7999999999999672,
+            "irradianceIntensity": 2,
             "constantAmbientLight": {
               "r": 0.011764705882352941,
               "g": 0.011764705882352941,
               "b": 0.011764705882352941,
               "a": 1
             },
-            "iblExposure": 0.4999999999999996,
-            "iblGamma": 2.100000000000001
+            "iblExposure": 1,
+            "iblGamma": 2
           },
           "SkyPass": {
             "exposure": 0.2699999999999999,
-            "gamma": 2.0900000000000016
+            "gamma": 1.9799999999999984
           },
           "Car": {
             "position": {
@@ -38,7 +38,38 @@
             }
           },
           "MotionBlurPass": {
-            "amount": 1
+            "amount": 0
+          },
+          "DebugPass": {
+            "alpha": 0.7999999999999992,
+            "mode": 1
+          },
+          "SpecularCompositionPass": {
+            "totalSpecularIntensity": 1
+          },
+          "IBLPass": {
+            "constantAmbientLight": {
+              "r": 0.03529411764705882,
+              "g": 0.03529411764705882,
+              "b": 0.03529411764705882,
+              "a": 1
+            },
+            "irradianceIntensity": 1,
+            "iblExposure": 1.2499999999999853
+          },
+          "BokehPass": {
+            "focus": 200,
+            "aperture": 0.00005,
+            "maxBlur": 0
+          },
+          "FogPass": {
+            "amount": 0.0005,
+            "fogColor": {
+              "r": 0.3176470588235294,
+              "g": 0.3568627450980392,
+              "b": 0.403921568627451,
+              "a": 1
+            }
           }
         }
       },
@@ -299,6 +330,8 @@
   },
   "definitionVersion": "0.4.0",
   "revisionHistory": [
+    "BmNV5fJ8gD9LtAND",
+    "nId4L3ug4-EiUMVR",
     "AaCPtIu4yPqOL03G",
     "BtfddIgmyZnW7ZdR",
     "LrI5BrVcJ4McNU0A",

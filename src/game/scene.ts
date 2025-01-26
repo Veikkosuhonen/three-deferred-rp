@@ -30,10 +30,19 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
   }
 
   if (object instanceof THREE.Mesh || object instanceof THREE.InstancedMesh) {
-    //const variantKey = getVariantKey(!!object.material.map, !!object.material.normalMap, !!object.material.roughnessMap, !!object.material.emissiveMap, object instanceof THREE.InstancedMesh);
-    //const shader = gBufferShaderVariants[variantKey];
+    const variantKey = getVariantKey(
+      !!object.material.map, 
+      !!object.material.normalMap, 
+      !!object.material.roughnessMap, 
+      !!object.material.emissiveMap, 
+      object instanceof THREE.InstancedMesh || object.geometry instanceof THREE.InstancedBufferGeometry || object.userData.instanced
+    );
+
+    console.log(object)
+
+    const shader = gBufferShaderVariants[variantKey];
     
-    gridMaterial.userData.materialKeys.forEach((key: string) => {
+    shader.userData.materialKeys.forEach((key: string) => {
       const materialProperty = (object.material as Record<string, any>)[key];
       if (materialProperty !== undefined) {
         object.userData[key] = materialProperty;
@@ -42,8 +51,7 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
       }
     })
     
-    object.material = gridMaterial;
-    //object.material = shader;
+    object.material = shader;
 
     object.onBeforeRender = () => {
       object.material.uniforms.previousWorldMatrix.value.copy(object.userData.previousWorldMatrix);

@@ -1,5 +1,9 @@
 import * as THREE from "three";
 
+export type SceneObject = THREE.Object3D & {
+  material: THREE.MeshPhysicalMaterial
+}
+
 export const lampPost = () => {
 
   const b = new THREE.Object3D()
@@ -24,19 +28,25 @@ export const lampPost = () => {
 }
 
 export const boxInstance = () => {
-  const b = new THREE.Object3D()
+  const b = baseObject()
   b.userData.box = true
   return b
 }
 
 export const sphereInstance = () => {
-  const b = new THREE.Object3D()
+  const b = baseObject()
   b.userData.sphere = true
   return b
 }
 
 export const cylinderInstance = () => {
-  const b = new THREE.Object3D()
+  const b = baseObject()
   b.userData.cylinder = true
+  return b
+}
+
+const baseObject = () => {
+  const b = new THREE.Object3D() as SceneObject
+  b.material = new THREE.MeshPhysicalMaterial()
   return b
 }

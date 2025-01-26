@@ -36,7 +36,7 @@ void main() {
 
   gColorAo = vec4(0.0);
   gNormalRoughness = vec4(0.0);
-  gPositionMetalness = vec4(0.0, 0.0, 100000.0, 0.0);
+  gPositionMetalness = vec4(0.0, 0.0, -100000.0, 0.0);
   gEmission = vec4(0.0);
   gVelocity = vec4(velocity, 0.0, 0.0);
 }

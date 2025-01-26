@@ -48,12 +48,12 @@ export const setupPipeline = async (game: Game) => {
 
   composer.addPass(new TexturePass("IBL Diffuse output", lightBuffer.textures[0]));
 
-  composer.addPass(new SkyPass(cubeMap.texture, game.mainCamera));
+  composer.addPass(new SkyPass(gBuffer, cubeMap.texture, game.mainCamera));
 
   const ssrPass = new SSRPass(gBuffer, game.mainCamera, savePass.buffer.texture, lightBuffer.textures[1], brdfLUT);
   composer.addPass(ssrPass);
 
-  composer.addPass(new FogPass(gBuffer, game.mainCamera));
+  // composer.addPass(new FogPass(gBuffer, game.mainCamera));
 
   composer.addPass(savePass);
 
