@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { lampPost } from "./objects";
 
-const WIDTH = 8;
-const HEIGHT = 1;
+export const HIGHWAY_WIDTH = 8;
+export const HIGHWAY_THICKNESS = 1;
+export const HIGHWAY_HEIGHT = 15;
 
 export const generateHighway = (
   width: number,
@@ -12,7 +13,7 @@ export const generateHighway = (
   const dir = new THREE.Vector2(1, 0)
   const currentPos = new THREE.Vector2(0.01, height / 2)
   
-  while(currentPos.x < width && currentPos.y < height && currentPos.y > 0) {
+  do {
 
     path.push(new THREE.Vector3(currentPos.x, 0, currentPos.y));
 
@@ -26,7 +27,7 @@ export const generateHighway = (
     if (dir.angleTo(new THREE.Vector2(1, 0)) > Math.PI / 4) {
       dir.rotateAround(new THREE.Vector2(0, 0), -2 * angleChange)
     }
-  }
+  } while(currentPos.x < width && currentPos.y < height && currentPos.y > 0)
 
   const spline = new THREE.CatmullRomCurve3(path)
 
@@ -40,10 +41,10 @@ export const generateHighway = (
   }
 
   const shape = new THREE.Shape([
-    new THREE.Vector2(-HEIGHT, -WIDTH),
-    new THREE.Vector2(HEIGHT, -WIDTH),
-    new THREE.Vector2(HEIGHT, WIDTH),
-    new THREE.Vector2(-HEIGHT, WIDTH),
+    new THREE.Vector2(-HIGHWAY_THICKNESS, -HIGHWAY_WIDTH),
+    new THREE.Vector2(HIGHWAY_THICKNESS, -HIGHWAY_WIDTH),
+    new THREE.Vector2(HIGHWAY_THICKNESS, HIGHWAY_WIDTH),
+    new THREE.Vector2(-HIGHWAY_THICKNESS, HIGHWAY_WIDTH),
   ])
 
   const geometry = new THREE.ExtrudeGeometry(shape, {
@@ -54,5 +55,8 @@ export const generateHighway = (
 
   obj.add(new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial()))
 
-  return obj
+  return {
+    obj,
+    path: spline,
+  }
 };

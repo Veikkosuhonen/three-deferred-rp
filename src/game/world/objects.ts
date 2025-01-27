@@ -15,6 +15,7 @@ export const lampPost = () => {
   const color = rnd > 0.5 ? 0xffffff : 0xffccaa
 
   const lamp = sphereInstance()
+  lamp.material.emissive.setHex(color).multiplyScalar(20.0)
   lamp.scale.setScalar(0.4)
   lamp.position.add({ x: 0, y: 5.0, z: 0.0 })
   b.add(lamp)

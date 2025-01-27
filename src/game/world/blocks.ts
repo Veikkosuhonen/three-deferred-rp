@@ -20,13 +20,13 @@ export const grid = {
     const group = new THREE.Group()
     // group.position.set(-this.width/4, 0, -this.height/4)
 
-    const { blocks, roads } = generate(this.width, this.height)
+    const { obj: highway, path: highwayPath } = generateHighway(this.width, this.height)
+    highway.position.set(0, 15, 0)
+    group.add(highway)
+
+    const { blocks, roads } = generate(this.width, this.height, highwayPath)
     blocks.forEach(block => group.add(block.toObject3D()))
     roads.forEach(road => group.add(road.toObject3D())) 
-
-    const highway = generateHighway(this.width, this.height)
-    highway.position.set(0, 20, 0)
-    group.add(highway)
 
     const lightDatas: THREE.PointLight[] = []
 
@@ -99,14 +99,17 @@ export const grid = {
 
     const matrixArray = new Float32Array(objs.length * 16)
     const colorArray = new Float32Array(objs.length * 3)
+    const emissiveArray = new Float32Array(objs.length * 3)
 
     for (let i = 0; i < objs.length; i++) {
       objs[i].matrixWorld.toArray(matrixArray, i * 16)
       objs[i].material.color.toArray(colorArray, i * 3)
+      objs[i].material.emissive.toArray(emissiveArray, i * 3)
     }
 
     instanced.setAttribute('instanceMatrix', new THREE.InstancedBufferAttribute(matrixArray, 16))
     instanced.setAttribute('color', new THREE.InstancedBufferAttribute(colorArray, 3))
+    instanced.setAttribute('emissive', new THREE.InstancedBufferAttribute(emissiveArray, 3))
 
     const mesh = new THREE.Mesh(instanced, new THREE.MeshPhysicalMaterial())
 

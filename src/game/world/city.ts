@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { boxInstance, lampPost } from "./objects";
+import { boxInstance, cylinderInstance, lampPost } from "./objects";
+import { HIGHWAY_HEIGHT, HIGHWAY_WIDTH } from "./highway";
 
 const LANE_WIDTH = 3;
 const SIDEWALK_WIDTH = 2;
@@ -76,6 +77,7 @@ class CityBlock {
   top: Road|null = null;
   bottom: Road|null = null;
   lanes: number;
+  highwayPoints: THREE.Vector2[] = [];
 
   constructor(topLeft: THREE.Vector2, bottomRight: THREE.Vector2, lanes: number) {
     this.topLeft = topLeft;
@@ -85,7 +87,6 @@ class CityBlock {
 
   toObject3D() {
     const obj = new THREE.Object3D();
-    const buildings = this.getBuildings();
     const b = boxInstance()
     const center = new THREE.Vector2().addVectors(this.topLeft, this.bottomRight).multiplyScalar(0.5);
     b.position.set(center.x, 0, center.y);
@@ -95,7 +96,7 @@ class CityBlock {
       this.topLeft.y - this.bottomRight.y,
     )
     obj.add(b);
-    buildings.forEach(building => obj.add(building));
+    this.getBuildings().forEach(building => obj.add(building));
     return obj;
   }
 
@@ -128,9 +129,9 @@ class CityBlock {
           roadLanes = this.right?.lanes || 0;
         } 
         if (j === 0) {
-          roadLanes = Math.max(roadLanes, this.top?.lanes || 0);
+          roadLanes += this.top?.lanes || 0;
         } else if (j === numBuildingsH - 1) {
-          roadLanes = Math.max(roadLanes, this.bottom?.lanes || 0);
+          roadLanes += this.bottom?.lanes || 0;
         }
 
         const center = new THREE.Vector2(
@@ -138,25 +139,48 @@ class CityBlock {
           this.topLeft.y + SIDEWALK_WIDTH + offsetH * j + 0.5 * offsetH,
         );
 
+        if (this.highwayPoints.some(point =>
+          point.distanceTo(center) < HIGHWAY_WIDTH + Math.max(offsetW, offsetH))
+        ) {
+          continue;
+        }
+
         const building = boxInstance();
 
         building.material.color.multiplyScalar(0.5 + 0.5 * Math.random());
 
-        const height = 5 + 6 * roadLanes * Math.random();
+        const height = 5 + 4 * roadLanes * Math.random();
         building.position.set(center.x, height / 2, center.y);
         building.scale.set(offsetW, height, offsetH);
         buildings.push(building);
       }
     }
+
+    // Add highway pillars
+    for (const point of this.highwayPoints) {
+      if (rectangleSDF(this.topLeft, this.bottomRight, point) < -0.5 - SIDEWALK_WIDTH) {
+        const pillar = cylinderInstance();
+        pillar.material.color.set(0xaaaaaa);
+        pillar.position.set(point.x, HIGHWAY_HEIGHT/2, point.y);
+        pillar.scale.set(1, HIGHWAY_HEIGHT, 1);
+        buildings.push(pillar);
+      }
+    }
+
     return buildings;
   }
 }
 
-export const generate = (width: number, height: number) => {
+export const generate = (width: number, height: number, highwayPath: THREE.CatmullRomCurve3) => {
   const finalBlocks: CityBlock[] = [];
   const finalRoads: Road[] = [];
 
   const rootBlock = new CityBlock(new THREE.Vector2(0, 0), new THREE.Vector2(width, height), 8);
+
+  rootBlock.highwayPoints = getHighwayPoints(
+    highwayPath.getSpacedPoints(100).map(p => new THREE.Vector2(p.x, p.z)),
+    rootBlock
+  );
 
   const queue: CityBlock[] = [rootBlock];
 
@@ -202,6 +226,8 @@ export const generate = (width: number, height: number) => {
       left.right = road;
       left.bottom = block.bottom;
 
+      left.highwayPoints = getHighwayPoints(block.highwayPoints, left);
+
       const right = new CityBlock(
         new THREE.Vector2(block.topLeft.x + split + roadWidth / 2, block.topLeft.y),
         block.bottomRight,
@@ -212,6 +238,8 @@ export const generate = (width: number, height: number) => {
       right.top = block.top;
       right.right = block.right;
       right.bottom = block.bottom;
+
+      right.highwayPoints = getHighwayPoints(block.highwayPoints, right);
 
       queue.push(left, right);
     } else {
@@ -238,6 +266,8 @@ export const generate = (width: number, height: number) => {
       top.right = block.right;
       top.bottom = road;
 
+      top.highwayPoints = getHighwayPoints(block.highwayPoints, top);
+
       const bottom = new CityBlock(
         new THREE.Vector2(block.topLeft.x, block.topLeft.y + split + roadWidth / 2),
         block.bottomRight,
@@ -249,9 +279,21 @@ export const generate = (width: number, height: number) => {
       bottom.right = block.right;
       bottom.bottom = block.bottom;
 
+      bottom.highwayPoints = getHighwayPoints(block.highwayPoints, bottom);
+
       queue.push(top, bottom);
     }
   }
 
   return { blocks: finalBlocks, roads: finalRoads };
 };
+
+const getHighwayPoints = (points: THREE.Vector2[], block: CityBlock) => {
+  return points.filter(p => rectangleSDF(block.topLeft, block.bottomRight, p) < HIGHWAY_WIDTH);
+}
+
+const rectangleSDF = (topLeft: THREE.Vector2, bottomRight: THREE.Vector2, point: THREE.Vector2): number => {
+  const dx = Math.max(topLeft.x - point.x, point.x - bottomRight.x);
+  const dy = Math.max(topLeft.y - point.y, point.y - bottomRight.y);
+  return Math.max(dx, dy);
+}

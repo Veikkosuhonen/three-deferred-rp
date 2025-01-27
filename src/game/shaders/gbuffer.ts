@@ -9,6 +9,7 @@ precision highp float;
 
 #ifdef USE_INSTANCING
 in vec3 color;
+in vec3 emissive;
 #endif
 layout (location = 3) in vec3 tangent;
 
@@ -17,7 +18,11 @@ uniform mat4 previousViewMatrix;
 
 out vec2 vUv;
 out vec3 vPosition;
+
+#ifdef USE_INSTANCING
 out vec3 vColor;
+out vec3 vEmissive;
+#endif
 
 out vec4 vPositionCS;
 out vec4 vPreviousPositionCS;
@@ -64,6 +69,7 @@ void main() {
 
   #ifdef USE_INSTANCING
   vColor = color;
+  vEmissive = emissive;
   #endif
 }
 `;
@@ -81,7 +87,11 @@ in vec3 vPosition;
 in vec2 vUv;
 in vec4 vPositionCS;
 in vec4 vPreviousPositionCS;
+
+#ifdef USE_INSTANCING
 in vec3 vColor;
+in vec3 vEmissive;
+#endif
 
 #ifdef USE_NORMAL_MAP
 in mat3 TBN;
@@ -119,8 +129,10 @@ void main() {
   #else
   #ifdef USE_INSTANCING
   vec3 diffuse = vColor;
+  vec3 emissive0 = vEmissive;
   #else
   vec3 diffuse = color;
+  vec3 emissive0 = emissive;
   #endif
   #endif
 
@@ -139,7 +151,7 @@ void main() {
   #endif
 
   #ifdef USE_EMISSION_MAP
-  vec3 emissive = texture(emissiveMap, vUv).rgb;
+  vec3 emissive0 = texture(emissiveMap, vUv).rgb;
   #endif
 
   vec3 currentPosNDC = vPositionCS.xyz / vPositionCS.w;
@@ -155,7 +167,7 @@ void main() {
   gColorAo = vec4(diffuse, ao);
   gNormalRoughness = vec4(normal, roughnessM);
   gPositionMetalness = vec4(position, metalnessM);
-  gEmission = vec4(emissiveIntensity * emissive, 0.0);
+  gEmission = vec4(1.0 * emissive0, 0.0);
   gVelocity = vec4(velocity, 0.0, 0.0);
 }
 `;
