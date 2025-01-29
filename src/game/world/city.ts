@@ -1,10 +1,9 @@
 import * as THREE from "three";
-import { boxInstance, cylinderInstance, lampPost } from "./objects";
+import { boxInstance, cylinderInstance, lampPost, SceneObject } from "./objects";
 import { HIGHWAY_HEIGHT, HIGHWAY_WIDTH } from "./highway";
 
 const LANE_WIDTH = 3;
 const SIDEWALK_WIDTH = 2;
-const MIN_BLOCK_SIZE = 10;
 const LAMPPOST_INTERVAL = 20;
 const BUILDING_SIZE = 10;
 
@@ -40,7 +39,7 @@ class Road {
     const obj = new THREE.Object3D();
     const b = boxInstance()
 
-    b.material.color.multiplyScalar(0.3 + 0.1 * Math.random());
+    b.material.color.multiplyScalar(0.6 + 0.1 * Math.random());
 
     const center = new THREE.Vector2().addVectors(this.start, this.end).multiplyScalar(0.5);
     b.position.set(center.x, 0, center.y);
@@ -101,28 +100,25 @@ class CityBlock {
   }
 
   getBuildings() {
+    type BuildingSlot = SceneObject | "empty" | "reserved";
+
     const innerWidth = this.bottomRight.x - this.topLeft.x - 2 * SIDEWALK_WIDTH;
     const innerHeight = this.bottomRight.y - this.topLeft.y - 2 * SIDEWALK_WIDTH;
 
     let numBuildingsW = Math.floor(innerWidth / BUILDING_SIZE);
     let numBuildingsH = Math.floor(innerHeight / BUILDING_SIZE);
 
-    // Make the smaller at most 2
-    if (numBuildingsW < numBuildingsH) {
-      numBuildingsW = Math.min(numBuildingsW, 2);
-    } else {
-      numBuildingsH = Math.min(numBuildingsH, 2);
-    }
-
     const offsetW = innerWidth / numBuildingsW;
     const offsetH = innerHeight / numBuildingsH;
 
-    const buildings = [];
+    const buildingsGrid: BuildingSlot[][] = Array(numBuildingsW).fill(null).map(() => Array(numBuildingsH).fill("empty"));
+
+    let maxRoadLanes = 0;
 
     for (let i = 0; i < numBuildingsW; i++) {
       for (let j = 0; j < numBuildingsH; j++) {
 
-        let roadLanes = 2;
+        let roadLanes = 0;
         if (i === 0) {
           roadLanes = this.left?.lanes || 0;
         } else if (i === numBuildingsW - 1) {
@@ -133,15 +129,22 @@ class CityBlock {
         } else if (j === numBuildingsH - 1) {
           roadLanes += this.bottom?.lanes || 0;
         }
+      
+        maxRoadLanes = Math.max(maxRoadLanes, roadLanes);
+
+        // Building not next to road?
+        if (roadLanes === 0) continue;
 
         const center = new THREE.Vector2(
           this.topLeft.x + SIDEWALK_WIDTH + offsetW * i + 0.5 * offsetW,
           this.topLeft.y + SIDEWALK_WIDTH + offsetH * j + 0.5 * offsetH,
         );
 
+        // Intersects highway?
         if (this.highwayPoints.some(point =>
           point.distanceTo(center) < HIGHWAY_WIDTH + Math.max(offsetW, offsetH))
         ) {
+          buildingsGrid[i][j] = "reserved";
           continue;
         }
 
@@ -152,9 +155,55 @@ class CityBlock {
         const height = 5 + 4 * roadLanes * Math.random();
         building.position.set(center.x, height / 2, center.y);
         building.scale.set(offsetW, height, offsetH);
-        buildings.push(building);
+        buildingsGrid[i][j] = building;
       }
     }
+
+    // Iterate corners. These can be turned into a big building
+    for (const i of [0, numBuildingsW - 1]) {
+      for (const j of [0, numBuildingsH - 1]) {
+        if (buildingsGrid[i][j] === "reserved" || buildingsGrid[i][j] === "empty") continue;
+        // Chance of big building
+        if (Math.random() > maxRoadLanes * 0.01) continue;
+        const building = buildingsGrid[i][j];
+        const newCenterOffset = new THREE.Vector2(0, 0);
+        let wScale = 1;
+        let hScale = 1;
+
+        // Iterate neighbours
+        for (const [di, dj] of [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0,  -1], [0,  1], 
+          [1,  -1], [1,  0], [1,  1]
+        ]) {
+          const ni = i + di;
+          const nj = j + dj;
+          if (ni < 0 || ni >= numBuildingsW || nj < 0 || nj >= numBuildingsH) continue;
+          if (buildingsGrid[ni][nj] === "reserved") continue;
+          buildingsGrid[ni][nj] = "reserved";
+          newCenterOffset.add(new THREE.Vector2(
+            di * offsetH / 2,
+            dj * offsetW / 2,
+          ));
+          wScale = Math.min(2, wScale + Math.abs(di));
+          hScale = Math.min(2, hScale + Math.abs(dj));
+        }
+
+        const newCenter = new THREE.Vector2(
+          building.position.x + newCenterOffset.x / 2,
+          building.position.z + newCenterOffset.y / 2,
+        );
+  
+        building.position.set(newCenter.x, building.position.y, newCenter.y);
+        building.scale.set(
+          wScale * offsetW,
+          building.scale.y,
+          hScale * offsetH,
+        )
+      }
+    }
+
+    const buildings = buildingsGrid.flat().filter(b => b !== "empty" && b !== "reserved");
 
     // Add highway pillars
     for (const point of this.highwayPoints) {
@@ -188,22 +237,22 @@ export const generate = (width: number, height: number, highwayPath: THREE.Catmu
     const block = queue.shift()!;
     const width = block.bottomRight.x - block.topLeft.x;
     const height = block.bottomRight.y - block.topLeft.y;
-    const minSplitSize = 2 * (MIN_BLOCK_SIZE + block.lanes * LANE_WIDTH);
   
-    if (width < minSplitSize || height < minSplitSize) {
-      finalBlocks.push(block);
-      continue;
-    }
+    const minSlotsW = 2 + Math.floor(Math.random() * 2);
+    const minSlotsH = 2 + Math.floor(Math.random() * 2);
+    const minBlockW = minSlotsW * BUILDING_SIZE + (block.lanes * LANE_WIDTH) + SIDEWALK_WIDTH;
+    const minBlockH = minSlotsH * BUILDING_SIZE + (block.lanes * LANE_WIDTH) + SIDEWALK_WIDTH;
 
     const newLanes = Math.max(2, block.lanes - 2);
     const roadWidth = newLanes * LANE_WIDTH;
 
     // Pick a weighted random direction to split the block
-    const rnd = Math.random() * (width + height);
-
-    const verticalTooSmall = height < minSplitSize;
+    const canSplitVertical = width / 2 > minBlockW;
+    const canSplitHorizontal = height / 2 > minBlockH;
+    const rndVertical = Math.random() * width * (canSplitVertical ? 1 : 0);
+    const rndHorizontal = Math.random() * height * (canSplitHorizontal ? 1 : 0);
   
-    if (rnd < width || verticalTooSmall) {
+    if (rndVertical > rndHorizontal && canSplitVertical) {
       // Split vertically
       const split = 0.5 * width;
       const road = new Road(
@@ -242,7 +291,8 @@ export const generate = (width: number, height: number, highwayPath: THREE.Catmu
       right.highwayPoints = getHighwayPoints(block.highwayPoints, right);
 
       queue.push(left, right);
-    } else {
+
+    } else if (canSplitHorizontal) {
       // Split horizontally
       const split = 0.5 * height;
 
@@ -282,6 +332,9 @@ export const generate = (width: number, height: number, highwayPath: THREE.Catmu
       bottom.highwayPoints = getHighwayPoints(block.highwayPoints, bottom);
 
       queue.push(top, bottom);
+
+    } else {
+      finalBlocks.push(block);
     }
   }
 
