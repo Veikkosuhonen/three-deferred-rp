@@ -1,7 +1,20 @@
 import * as THREE from "three";
 
+export class ObjectMaterialData {
+  color: THREE.Color
+  emissive: THREE.Color
+  emissiveIntensity: number
+  customShader?: THREE.ShaderMaterial
+
+  constructor() {
+    this.color = new THREE.Color(0xffffff)
+    this.emissive = new THREE.Color(0x000000)
+    this.emissiveIntensity = 0.0
+  }
+}
+
 export type SceneObject = THREE.Object3D & {
-  material: THREE.MeshPhysicalMaterial
+  material: ObjectMaterialData,
 }
 
 export const lampPost = () => {
@@ -46,8 +59,8 @@ export const cylinderInstance = () => {
   return b
 }
 
-const baseObject = () => {
+function baseObject() {
   const b = new THREE.Object3D() as SceneObject
-  b.material = new THREE.MeshPhysicalMaterial()
+  b.material = new ObjectMaterialData()
   return b
 }

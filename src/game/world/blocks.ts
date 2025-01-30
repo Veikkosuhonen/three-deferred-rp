@@ -24,12 +24,12 @@ export const grid = {
     highway.position.set(0, 15, 0)
     group.add(highway)
 
-    const { blocks, roads } = generate(this.width, this.height, highwayPath)
-    blocks.forEach(block => group.add(block.toObject3D()))
-    roads.forEach(road => group.add(road.toObject3D())) 
+    const instancedObjs = generate(this.width, this.height, highwayPath)
+    instancedObjs.forEach(obj => group.add(obj.toObject3D()))
 
     const lightDatas: THREE.PointLight[] = []
 
+    const boxesCustomShader: SceneObject[] = []
     const boxes: SceneObject[] = []
     const spheres: SceneObject[] = []
     const cylinders: SceneObject[] = []
@@ -41,7 +41,12 @@ export const grid = {
       let remove = true
     
       if (obj.userData.box) {
-        boxes.push(obj as SceneObject)
+        const obj1 = obj as SceneObject
+        if (obj1.material.customShader) {
+          boxesCustomShader.push(obj1)
+        } else {
+          boxes.push(obj1)
+        }
       } else if (obj.userData.sphere) {
         spheres.push(obj as SceneObject)
       } else if (obj.userData.cylinder) {
@@ -63,6 +68,13 @@ export const grid = {
     })
 
     toRemove.forEach(obj => obj.removeFromParent())
+
+    console.log(boxesCustomShader.length, boxes.length, spheres.length, cylinders.length)
+
+    group.add(this.buildInstanced(
+      new THREE.BoxGeometry(),
+      boxesCustomShader,
+    ))
 
     group.add(this.buildInstanced(
       new THREE.BoxGeometry(),
@@ -111,7 +123,7 @@ export const grid = {
     instanced.setAttribute('color', new THREE.InstancedBufferAttribute(colorArray, 3))
     instanced.setAttribute('emissive', new THREE.InstancedBufferAttribute(emissiveArray, 3))
 
-    const mesh = new THREE.Mesh(instanced, new THREE.MeshPhysicalMaterial())
+    const mesh = new THREE.Mesh(instanced, objs[0].material.customShader ?? new THREE.MeshPhysicalMaterial())
 
     mesh.userData.instanced = true;
 

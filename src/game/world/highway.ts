@@ -5,6 +5,8 @@ export const HIGHWAY_WIDTH = 8;
 export const HIGHWAY_THICKNESS = 1;
 export const HIGHWAY_HEIGHT = 15;
 
+const HIGHWAY_STEP = 150;
+
 export const generateHighway = (
   width: number,
   height: number,
@@ -17,7 +19,7 @@ export const generateHighway = (
 
     path.push(new THREE.Vector3(currentPos.x, 0, currentPos.y));
 
-    const offset = dir.clone().multiplyScalar(100);
+    const offset = dir.clone().multiplyScalar(HIGHWAY_STEP);
 
     currentPos.add(offset)
 

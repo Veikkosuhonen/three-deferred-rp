@@ -1,13 +1,18 @@
 import * as THREE from "three";
 import { boxInstance, cylinderInstance, lampPost, SceneObject } from "./objects";
 import { HIGHWAY_HEIGHT, HIGHWAY_WIDTH } from "./highway";
+import { buildingMaterial } from "../materials/building";
 
 const LANE_WIDTH = 3;
 const SIDEWALK_WIDTH = 2;
 const LAMPPOST_INTERVAL = 20;
 const BUILDING_SIZE = 10;
 
-class Road {
+abstract class CityElement {
+  abstract toObject3D(): THREE.Object3D;
+}
+
+class Road implements CityElement {
   start: THREE.Vector2;
   end: THREE.Vector2;
   topLeft: THREE.Vector2;
@@ -37,7 +42,7 @@ class Road {
 
   toObject3D() {
     const obj = new THREE.Object3D();
-    const b = boxInstance()
+    const b = boxInstance();
 
     b.material.color.multiplyScalar(0.6 + 0.1 * Math.random());
 
@@ -68,7 +73,7 @@ class Road {
   }
 }
 
-class CityBlock {
+class CityBlock implements CityElement {
   topLeft: THREE.Vector2;
   bottomRight: THREE.Vector2;
   left: Road|null = null;
@@ -149,10 +154,11 @@ class CityBlock {
         }
 
         const building = boxInstance();
+        building.material.customShader = buildingMaterial;
+        building.material.color.multiplyScalar(0.3 + 0.6 * Math.random());
 
-        building.material.color.multiplyScalar(0.5 + 0.5 * Math.random());
-
-        const height = 5 + 4 * roadLanes * Math.random();
+        const floorHeight = 3;
+        const height = 1 + floorHeight * (2 + Math.round(roadLanes * Math.random()));
         building.position.set(center.x, height / 2, center.y);
         building.scale.set(offsetW, height, offsetH);
         buildingsGrid[i][j] = building;
@@ -221,8 +227,7 @@ class CityBlock {
 }
 
 export const generate = (width: number, height: number, highwayPath: THREE.CatmullRomCurve3) => {
-  const finalBlocks: CityBlock[] = [];
-  const finalRoads: Road[] = [];
+  const elements: CityElement[] = []
 
   const rootBlock = new CityBlock(new THREE.Vector2(0, 0), new THREE.Vector2(width, height), 8);
 
@@ -262,7 +267,7 @@ export const generate = (width: number, height: number, highwayPath: THREE.Catmu
         new THREE.Vector2(0, 1),
       )
 
-      finalRoads.push(road);
+      elements.push(road);
 
       const left = new CityBlock(
         block.topLeft,
@@ -303,7 +308,7 @@ export const generate = (width: number, height: number, highwayPath: THREE.Catmu
         new THREE.Vector2(1, 0),
       );
 
-      finalRoads.push(road);
+      elements.push(road);
 
       const top = new CityBlock(
         block.topLeft,
@@ -334,11 +339,11 @@ export const generate = (width: number, height: number, highwayPath: THREE.Catmu
       queue.push(top, bottom);
 
     } else {
-      finalBlocks.push(block);
+      elements.push(block);
     }
   }
 
-  return { blocks: finalBlocks, roads: finalRoads };
+  return elements;
 };
 
 const getHighwayPoints = (points: THREE.Vector2[], block: CityBlock) => {

@@ -30,17 +30,24 @@ const configureSceneObjects = (object: THREE.Object3D, game: Game) => {
   }
 
   if (object instanceof THREE.Mesh || object instanceof THREE.InstancedMesh) {
-    const variantKey = getVariantKey(
-      !!object.material.map, 
-      !!object.material.normalMap, 
-      !!object.material.roughnessMap, 
-      !!object.material.emissiveMap, 
-      object instanceof THREE.InstancedMesh || object.geometry instanceof THREE.InstancedBufferGeometry || object.userData.instanced
-    );
 
-    console.log(object)
+    let shader: THREE.Material;
 
-    const shader = gBufferShaderVariants[variantKey];
+    if (object.material instanceof THREE.MeshPhysicalMaterial) {
+      const variantKey = getVariantKey(
+        !!object.material.map, 
+        !!object.material.normalMap, 
+        !!object.material.roughnessMap, 
+        !!object.material.emissiveMap, 
+        object instanceof THREE.InstancedMesh || object.geometry instanceof THREE.InstancedBufferGeometry || object.userData.instanced
+      );
+
+      shader = gBufferShaderVariants[variantKey];
+    } else if (object.material instanceof THREE.ShaderMaterial) {
+      shader = object.material;
+    } else {
+      throw new Error(`Unsupported material type ${object.material.type}`);
+    }
     
     shader.userData.materialKeys.forEach((key: string) => {
       const materialProperty = (object.material as Record<string, any>)[key];
