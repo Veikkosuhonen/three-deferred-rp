@@ -36,15 +36,20 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const animate = () => {
     Profiler.end('frame')
     Profiler.start('frame')
-
     stats.begin();
+
     controls.update(clock.getDelta() * 20.0);
+    
     pipeline.render();
     // debugLines.updateFromBuffer(game.world.debugRender())
     // renderer.render(debugLines.lines, game.mainCamera);
     game.mainCamera.userData.previousViewMatrix.copy(game.mainCamera.matrixWorldInverse);
     stats.end();
   }
+
+  setInterval(() => {
+    game.update(1 / 20);
+  }, 1 / 20)
 
   renderer.setAnimationLoop(animate);
 

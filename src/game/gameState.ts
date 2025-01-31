@@ -1,10 +1,12 @@
 import { ISheet } from "@theatre/core";
 import * as THREE from "three";
+import { Entity } from "./world/blocks";
 
 export class Game {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   lights: THREE.Scene;
+  entities: Entity[] = [];
   mainCamera: THREE.PerspectiveCamera
   sheet: ISheet;
   loadingManager: THREE.LoadingManager;
@@ -16,5 +18,9 @@ export class Game {
     this.mainCamera = mainCamera
     this.sheet = sheet;
     this.loadingManager = loadingManager
+  }
+
+  update(deltaTime: number) {
+    this.entities.forEach(entity => entity.update(deltaTime))
   }
 }

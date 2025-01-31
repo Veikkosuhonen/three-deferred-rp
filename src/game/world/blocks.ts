@@ -2,12 +2,19 @@ import * as THREE from "three"
 import { generate } from "./city"
 import { generateHighway } from "./highway"
 import { SceneObject } from "./objects"
+import { Road } from "./Road"
+import { Car } from "./Car"
 
 export type BlockGen = () => THREE.Object3D
 
 type GeneratorResult = {
   props: THREE.Object3D,
   lights: THREE.Object3D,
+  entities: Entity[],
+}
+
+export interface Entity {
+  update(deltaTime: number): void
 }
 
 export const grid = {
@@ -18,6 +25,8 @@ export const grid = {
     console.time('generate')
 
     const group = new THREE.Group()
+    const lights = new THREE.Group()
+    const entities: Entity[] = []
 
     // Ground
     const ground = new THREE.Mesh(
@@ -37,6 +46,20 @@ export const grid = {
     // City
     const instancedObjs = generate(this.width, this.height, highwayPath)
     instancedObjs.forEach(obj => group.add(obj.toObject3D()))
+
+    // Cars
+    instancedObjs.filter(obj => obj instanceof Road).forEach(road => {
+      for (let lane = 1; lane <= road.lanes/2; lane++) {
+        for (let pos = 0; pos < road.length; pos += 10) {
+          if (Math.random() > 0.2) continue;
+
+          const car = new Car(road, pos, lane)
+          entities.push(car)
+          group.add(car.object)
+          lights.add(car.light)
+        }
+      }
+    })
 
     const lightDatas: THREE.PointLight[] = []
 
@@ -85,6 +108,8 @@ export const grid = {
       boxes: boxes.length,
       spheres: spheres.length,
       cylinders: cylinders.length,
+      lights: lightDatas.length,
+      entities: entities.length,
     })
 
     group.add(this.buildInstanced(
@@ -107,7 +132,6 @@ export const grid = {
       cylinders
     ))
 
-    const lights = new THREE.Group()
     lights.position.copy(group.position)
     lights.add(this.buildInstancedLights(lightDatas))
 
@@ -115,7 +139,8 @@ export const grid = {
 
     return {
       props: group,
-      lights
+      lights,
+      entities,
     }
   },
 
