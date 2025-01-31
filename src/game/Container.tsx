@@ -1,5 +1,6 @@
 import { createSignal, For, onMount, Show } from "solid-js";
 import { loadingManager, onLoaded, start } from "./game";
+import { Profiler } from "./profiler";
 
 export default function Container() {
   let canvas: HTMLCanvasElement|undefined;
@@ -36,10 +37,10 @@ export default function Container() {
   });
 
   setInterval(() => {
-    const timingData = performance.getEntriesByType("measure")
-    setTimings(timingData.map(p => ({
-      pass: p.name,
-      timeMs: p.duration
+    const timingData = Object.entries(Profiler.measures)
+    setTimings(timingData.map(t => ({
+      pass: t[0],
+      timeMs: t[1]
     })))
   }, 1000)
 

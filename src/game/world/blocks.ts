@@ -18,12 +18,23 @@ export const grid = {
     console.time('generate')
 
     const group = new THREE.Group()
-    // group.position.set(-this.width/4, 0, -this.height/4)
 
+    // Ground
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(this.width, this.height),
+      new THREE.MeshPhysicalMaterial()
+    )
+    ground.material.color.multiplyScalar(0.6);
+    ground.rotation.x = -Math.PI / 2
+    ground.position.set(this.width / 2, 0, this.height / 2)
+    group.add(ground)
+
+    // Highway
     const { obj: highway, path: highwayPath } = generateHighway(this.width, this.height)
     highway.position.set(0, 15, 0)
     group.add(highway)
 
+    // City
     const instancedObjs = generate(this.width, this.height, highwayPath)
     instancedObjs.forEach(obj => group.add(obj.toObject3D()))
 
@@ -69,7 +80,12 @@ export const grid = {
 
     toRemove.forEach(obj => obj.removeFromParent())
 
-    console.log(boxesCustomShader.length, boxes.length, spheres.length, cylinders.length)
+    console.table({
+      boxesCustomShader: boxesCustomShader.length,
+      boxes: boxes.length,
+      spheres: spheres.length,
+      cylinders: cylinders.length,
+    })
 
     group.add(this.buildInstanced(
       new THREE.BoxGeometry(),
@@ -82,12 +98,12 @@ export const grid = {
     ))
 
     group.add(this.buildInstanced(
-      new THREE.SphereGeometry(),
+      new THREE.SphereGeometry(1, 16, 8),
       spheres,
     ))
 
     group.add(this.buildInstanced(
-      new THREE.CylinderGeometry(),
+      new THREE.CylinderGeometry(1, 1, 1, 16),
       cylinders
     ))
 

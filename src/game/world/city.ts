@@ -5,7 +5,7 @@ import { buildingMaterial } from "../materials/building";
 
 const LANE_WIDTH = 3;
 const SIDEWALK_WIDTH = 2;
-const LAMPPOST_INTERVAL = 20;
+const LAMPPOST_INTERVAL = 10;
 const BUILDING_SIZE = 10;
 
 abstract class CityElement {
@@ -13,6 +13,8 @@ abstract class CityElement {
 }
 
 class Road implements CityElement {
+  height = 0.0;
+  thickness = 1.0;
   start: THREE.Vector2;
   end: THREE.Vector2;
   topLeft: THREE.Vector2;
@@ -42,19 +44,22 @@ class Road implements CityElement {
 
   toObject3D() {
     const obj = new THREE.Object3D();
-    const b = boxInstance();
+  
+    if (this.height > 0) {
+      const b = boxInstance();
+      b.material.color.multiplyScalar(0.6 + 0.1 * Math.random());
 
-    b.material.color.multiplyScalar(0.6 + 0.1 * Math.random());
-
-    const center = new THREE.Vector2().addVectors(this.start, this.end).multiplyScalar(0.5);
-    b.position.set(center.x, 0, center.y);
-    b.scale.set(
-      this.topLeft.x - this.bottomRight.x,
-      1.0,
-      this.topLeft.y - this.bottomRight.y,
-    )
-    obj.add(b);
-    this.getLampPosts().forEach(lamp => obj.add(lamp));
+      const center = new THREE.Vector2().addVectors(this.start, this.end).multiplyScalar(0.5);
+      b.position.set(center.x, this.height - this.thickness/2, center.y);
+      b.scale.set(
+        this.topLeft.x - this.bottomRight.x,
+        this.thickness,
+        this.topLeft.y - this.bottomRight.y,
+      )
+      obj.add(b);
+    }
+  
+    // this.getLampPosts().forEach(lamp => obj.add(lamp));
     return obj;
   }
 
@@ -89,6 +94,15 @@ class CityBlock implements CityElement {
     this.lanes = lanes;
   }
 
+  getRoads(): (Road|null)[] {
+    return [
+      this.left,
+      this.right,
+      this.top,
+      this.bottom
+    ]
+  }
+
   toObject3D() {
     const obj = new THREE.Object3D();
     const b = boxInstance()
@@ -96,11 +110,12 @@ class CityBlock implements CityElement {
     b.position.set(center.x, 0, center.y);
     b.scale.set(
       this.topLeft.x - this.bottomRight.x,
-      1.5,
+      0.5,
       this.topLeft.y - this.bottomRight.y,
     )
     obj.add(b);
     this.getBuildings().forEach(building => obj.add(building));
+    this.getSideWalkProps().forEach(prop => obj.add(prop));
     return obj;
   }
 
@@ -158,7 +173,7 @@ class CityBlock implements CityElement {
         building.material.color.multiplyScalar(0.3 + 0.6 * Math.random());
 
         const floorHeight = 3;
-        const height = 1 + floorHeight * (2 + Math.round(roadLanes * Math.random()));
+        const height = 1 + floorHeight * (2 + Math.round(2 * roadLanes * Math.random()));
         building.position.set(center.x, height / 2, center.y);
         building.scale.set(offsetW, height, offsetH);
         buildingsGrid[i][j] = building;
@@ -209,6 +224,21 @@ class CityBlock implements CityElement {
       }
     }
 
+    // Finally, fill in empty slots with lamp posts
+    for (let i = 0; i < numBuildingsW; i++) {
+      for (let j = 0; j < numBuildingsH; j++) {
+        if (buildingsGrid[i][j] === "empty") {
+          const lamp = lampPost();
+          lamp.position.set(
+            this.topLeft.x + SIDEWALK_WIDTH + offsetW * i + 0.5 * offsetW,
+            0.0,
+            this.topLeft.y + SIDEWALK_WIDTH + offsetH * j + 0.5 * offsetH,
+          );
+          buildingsGrid[i][j] = lamp;
+        }
+      }
+    }
+
     const buildings = buildingsGrid.flat().filter(b => b !== "empty" && b !== "reserved");
 
     // Add highway pillars
@@ -223,6 +253,34 @@ class CityBlock implements CityElement {
     }
 
     return buildings;
+  }
+
+  getSideWalkProps() {
+    const lampOffset = SIDEWALK_WIDTH / 4;
+    const topLeft = new THREE.Vector2(this.topLeft.x + lampOffset, this.topLeft.y + lampOffset);
+    const topRight = new THREE.Vector2(this.bottomRight.x - lampOffset, this.topLeft.y + lampOffset);
+    const bottomRight = new THREE.Vector2(this.bottomRight.x - lampOffset, this.bottomRight.y - lampOffset);
+    const bottomLeft = new THREE.Vector2(this.topLeft.x + lampOffset, this.bottomRight.y - lampOffset);
+    const sidewalkCurves = ([
+      this.top    ? new THREE.LineCurve(topLeft, topRight) : null,
+      this.right  ? new THREE.LineCurve(topRight, bottomRight) : null,
+      this.bottom ? new THREE.LineCurve(bottomRight, bottomLeft) : null,
+      this.left   ? new THREE.LineCurve(bottomLeft, topLeft) : null,
+    ].filter(Boolean) as THREE.LineCurve[]);
+
+    const props: THREE.Object3D[] = [];
+
+    sidewalkCurves.forEach(curve => {
+      const nLamps = Math.floor(curve.getLength() / LAMPPOST_INTERVAL);
+      curve.getSpacedPoints(nLamps).forEach((point) => {
+        const lamp = lampPost();
+        lamp.position.set(point.x, 0.0, point.y);
+        lamp.scale.setScalar(0.5);
+        props.push(lamp);
+      })
+    })
+
+    return props;
   }
 }
 

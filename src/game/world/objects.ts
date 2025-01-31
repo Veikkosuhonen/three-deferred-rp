@@ -19,16 +19,16 @@ export type SceneObject = THREE.Object3D & {
 
 export const lampPost = () => {
 
-  const b = new THREE.Object3D()
+  const b = baseObject()
   const pole = cylinderInstance()
   pole.scale.set(0.1, 5.0, 0.1)
   pole.position.add({ x: 0.0, y: 2.5, z: 0.0 })
 
   const rnd = Math.random()
-  const color = rnd > 0.5 ? 0xffffff : 0xffccaa
+  const color = rnd > 0.5 ? 0xffccaa : 0xffaa77
 
   const lamp = sphereInstance()
-  lamp.material.emissive.setHex(color).multiplyScalar(20.0)
+  lamp.material.emissive.setHex(color).multiplyScalar(15.0)
   lamp.scale.setScalar(0.4)
   lamp.position.add({ x: 0, y: 5.0, z: 0.0 })
   b.add(lamp)

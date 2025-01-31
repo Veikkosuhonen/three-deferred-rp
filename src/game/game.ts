@@ -8,6 +8,7 @@ import { Game } from './gameState';
 // import { createLines } from './lineRenderer';
 import theatreProject from "./demo project.theatre-project-state.json";
 import { setupPipeline } from './pipeline';
+import { Profiler } from './profiler';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
@@ -33,8 +34,8 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const pipeline = await setupPipeline(game)
 
   const animate = () => {
-    performance.clearMarks('start-frame');
-    performance.mark('start-frame')
+    Profiler.end('frame')
+    Profiler.start('frame')
 
     stats.begin();
     controls.update(clock.getDelta() * 20.0);
@@ -43,11 +44,6 @@ export const start = async (canvas: HTMLCanvasElement) => {
     // renderer.render(debugLines.lines, game.mainCamera);
     game.mainCamera.userData.previousViewMatrix.copy(game.mainCamera.matrixWorldInverse);
     stats.end();
-
-    performance.clearMarks('end-frame');
-    performance.mark('end-frame');
-    performance.clearMeasures('frame');
-    performance.measure('frame', 'start-frame', 'end-frame');
   }
 
   renderer.setAnimationLoop(animate);

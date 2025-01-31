@@ -1,11 +1,11 @@
 import * as THREE from "three";
 import { lampPost } from "./objects";
 
-export const HIGHWAY_WIDTH = 8;
+export const HIGHWAY_WIDTH = 10;
 export const HIGHWAY_THICKNESS = 1;
 export const HIGHWAY_HEIGHT = 15;
 
-const HIGHWAY_STEP = 150;
+const HIGHWAY_STEP = 200;
 
 export const generateHighway = (
   width: number,
@@ -29,17 +29,26 @@ export const generateHighway = (
     if (dir.angleTo(new THREE.Vector2(1, 0)) > Math.PI / 4) {
       dir.rotateAround(new THREE.Vector2(0, 0), -2 * angleChange)
     }
-  } while(currentPos.x < width && currentPos.y < height && currentPos.y > 0)
+  } while(currentPos.x < width && currentPos.y < height && currentPos.y > 0 && currentPos.x > 0)
 
   const spline = new THREE.CatmullRomCurve3(path)
 
   const obj = new THREE.Object3D()
 
-  const numLamps = spline.getLength() / 20
-  for (const pos of spline.getSpacedPoints(numLamps)) {
-    const l = lampPost()
-    l.position.copy(pos)
-    obj.add(l)
+  const numLamps = spline.getLength() / 10
+  for (let i = 0; i < numLamps; i++) {
+    const pos = spline.getPointAt(i / numLamps)
+    const t = spline.getTangent(i / numLamps)
+    const left = new THREE.Vector3(-t.z, 0, t.x)
+
+    const l1 = lampPost()
+    const pos1 = pos.clone().add(left.clone().multiplyScalar(HIGHWAY_WIDTH * 0.9))
+    const l2 = lampPost()
+    const pos2 = pos.clone().add(left.clone().multiplyScalar(-HIGHWAY_WIDTH * 0.9))
+    l1.position.copy(pos1)
+    l2.position.copy(pos2)
+    obj.add(l1)
+    obj.add(l2)
   }
 
   const shape = new THREE.Shape([

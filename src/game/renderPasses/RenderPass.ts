@@ -1,5 +1,6 @@
 import * as THREE from "three"
 import { Pass } from "three/examples/jsm/Addons.js";
+import { Profiler } from "../profiler";
 
 export type PassProps = {
   renderer: THREE.WebGLRenderer,
@@ -18,11 +19,7 @@ export abstract class RenderPass extends Pass {
   abstract pass({ renderer, read, write }: PassProps): void
 
   render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget, deltaTime: number, maskActive: boolean): void {
-    const markName = `start-${this.name}`
-    const measureName = `pass-${this.name}`
-
-    performance.clearMarks(markName)
-    performance.mark(markName)
+    Profiler.start(this.name)
 
     this.pass({
       renderer,
@@ -30,7 +27,6 @@ export abstract class RenderPass extends Pass {
       write: writeBuffer
     })
 
-    performance.clearMeasures(measureName)
-    performance.measure(measureName, markName)
+    Profiler.end(this.name)
   }
 }

@@ -32,7 +32,7 @@ vec3 random3(vec2 p) {
 
 const int MAX_STEPS = 300;
 
-const int N_SAMPLES = 4;
+const int N_SAMPLES = 1;
 
 float pointToLineDistance(vec3 x0, vec3 x1, vec3 x2) {
   //x0: point, x1: linePointA, x2: linePointB
