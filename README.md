@@ -17,3 +17,5 @@ And like a procedural city thing
 Maybe will make a demo with this
 
 ![out](https://github.com/user-attachments/assets/603ed4e6-ea42-403c-a799-0f476864619d)
+
+30 fps, not bad on an M1 Pro laptop
