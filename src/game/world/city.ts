@@ -3,16 +3,17 @@ import { CityBlock } from "./CityBlock";
 import { Road } from "./Road";
 import { BUILDING_SIZE, LANE_WIDTH, SIDEWALK_WIDTH } from "./constants";
 import { getHighwayPoints } from "./utils";
+import { HighwayPoint } from "./highway";
 
-export const generate = (width: number, height: number, highwayPath: THREE.CatmullRomCurve3) => {
+export const generate = (width: number, height: number, highways: THREE.CatmullRomCurve3[]) => {
   const elements: Array<Road|CityBlock> = []
 
   const rootBlock = new CityBlock(new THREE.Vector2(0, 0), new THREE.Vector2(width, height), 8);
 
-  rootBlock.highwayPoints = getHighwayPoints(
-    highwayPath.getSpacedPoints(100).map(p => new THREE.Vector2(p.x, p.z)),
+  rootBlock.highwayPoints = highways.flatMap(path => getHighwayPoints(
+    path.getSpacedPoints(100).map(p => new HighwayPoint(p.x, p.z, p.y)),
     rootBlock
-  );
+  ));
 
   const queue: CityBlock[] = [rootBlock];
 

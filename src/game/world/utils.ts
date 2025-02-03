@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { CityBlock } from './CityBlock';
-import { HIGHWAY_WIDTH } from './highway';
+import { HIGHWAY_WIDTH, HighwayPoint } from './highway';
 
-export const getHighwayPoints = (points: THREE.Vector2[], block: CityBlock) => {
+export const getHighwayPoints = (points: HighwayPoint[], block: CityBlock) => {
   return points.filter(p => rectangleSDF(block.topLeft, block.bottomRight, p) < HIGHWAY_WIDTH);
 }
 

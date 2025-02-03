@@ -38,13 +38,20 @@ export const grid = {
     ground.position.set(this.width / 2, 0, this.height / 2)
     group.add(ground)
 
-    // Highway
-    const { obj: highway, path: highwayPath } = generateHighway(this.width, this.height)
-    highway.position.set(0, 15, 0)
-    group.add(highway)
+    // Highways
+    const highways = [
+      { dir: new THREE.Vector2(1, 0), bridgeHeight: 9 },
+      { dir: new THREE.Vector2(0, 1), bridgeHeight: 17 },
+    ].map(({ dir, bridgeHeight }) => {
+      const { obj: highway, path } = generateHighway(this.width, this.height, dir)
+      highway.position.set(0, bridgeHeight, 0)
+      path.points.forEach(p => p.y = bridgeHeight)
+      group.add(highway)
+      return path
+    })
 
     // City
-    const instancedObjs = generate(this.width, this.height, highwayPath)
+    const instancedObjs = generate(this.width, this.height, highways)
     instancedObjs.forEach(obj => group.add(obj.toObject3D()))
 
     // Cars

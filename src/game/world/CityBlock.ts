@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { boxInstance, cylinderInstance, lampPost, SceneObject } from './objects';
 import { rectangleSDF } from './utils';
-import { HIGHWAY_HEIGHT, HIGHWAY_WIDTH } from './highway';
+import { HIGHWAY_WIDTH, HighwayPoint } from './highway';
 import { BUILDING_SIZE, LAMPPOST_INTERVAL, SIDEWALK_WIDTH } from './constants';
 import { buildingMaterial } from '../materials/building';
 import { Road } from './Road';
@@ -14,7 +14,7 @@ export class CityBlock {
   top: Road|null = null;
   bottom: Road|null = null;
   lanes: number;
-  highwayPoints: THREE.Vector2[] = [];
+  highwayPoints: HighwayPoint[] = [];
 
   constructor(topLeft: THREE.Vector2, bottomRight: THREE.Vector2, lanes: number) {
     this.topLeft = topLeft;
@@ -60,6 +60,9 @@ export class CityBlock {
     const offsetH = innerHeight / numBuildingsH;
 
     const buildingsGrid: BuildingSlot[][] = Array(numBuildingsW).fill(null).map(() => Array(numBuildingsH).fill("empty"));
+
+    // The final buildings
+    const buildings: SceneObject[] = [];
 
     let maxRoadLanes = 0;
 
@@ -152,6 +155,45 @@ export class CityBlock {
       }
     }
 
+    // Every building can receive an upper section
+    for (let i = 0; i < numBuildingsW; i++) {
+      for (let j = 0; j < numBuildingsH; j++) {
+        const b = buildingsGrid[i][j];
+        if (b === "reserved" || b === "empty") continue;
+        if (Math.random() > 0.5) continue;
+
+        const upper = boxInstance();
+        upper.material.customShader = buildingMaterial;
+        upper.material.color.copy(b.material.color);
+        const upperHeight = b.scale.y / 2;
+        upper.position.set(
+          b.position.x,
+          b.position.y + b.scale.y / 2 + upperHeight / 2,
+          b.position.z,
+        );
+        upper.scale.set(
+          b.scale.x * (Math.random() * 0.5 + 0.5), 
+          upperHeight, 
+          b.scale.z * (Math.random() * 0.5 + 0.5),
+        );
+        buildings.push(upper);
+
+        // Building with upper section can get a spire
+        if (Math.random() > 0.8) {
+          const spire = cylinderInstance();
+          const spireHeight = upperHeight / 2;
+          spire.material.color.set(0xaaaaaa);
+          spire.position.set(
+            upper.position.x,
+            upper.position.y + upper.scale.y / 2 + spireHeight / 2,
+            upper.position.z,
+          );
+          spire.scale.set(0.5, spireHeight, 0.5);
+          buildings.push(spire);
+        }
+      }
+    }
+
     // Finally, fill in empty slots with lamp posts
     for (let i = 0; i < numBuildingsW; i++) {
       for (let j = 0; j < numBuildingsH; j++) {
@@ -167,15 +209,21 @@ export class CityBlock {
       }
     }
 
-    const buildings = buildingsGrid.flat().filter(b => b !== "empty" && b !== "reserved");
+    buildings.push(...buildingsGrid.flat().filter(b => b !== "empty" && b !== "reserved"));
 
     // Add highway pillars
     for (const point of this.highwayPoints) {
       if (rectangleSDF(this.topLeft, this.bottomRight, point) < -0.5 - SIDEWALK_WIDTH) {
+        // Check that pillar not too close to other pillars that are lower
+        // This is to avoid pillars of higher highways intersecting with lower highways
+        const tooClose = this.highwayPoints.some(otherPoint =>
+          otherPoint.bridgeHeight < point.bridgeHeight && otherPoint.distanceTo(point) < HIGHWAY_WIDTH)
+        if (tooClose) continue;
+
         const pillar = cylinderInstance();
         pillar.material.color.set(0xaaaaaa);
-        pillar.position.set(point.x, HIGHWAY_HEIGHT/2, point.y);
-        pillar.scale.set(1, HIGHWAY_HEIGHT, 1);
+        pillar.position.set(point.x, point.bridgeHeight/2, point.y);
+        pillar.scale.set(1, point.bridgeHeight, 1);
         buildings.push(pillar);
       }
     }

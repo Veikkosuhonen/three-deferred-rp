@@ -3,17 +3,29 @@ import { lampPost } from "./objects";
 
 export const HIGHWAY_WIDTH = 10;
 export const HIGHWAY_THICKNESS = 1;
-export const HIGHWAY_HEIGHT = 15;
 
 const HIGHWAY_STEP = 200;
+
+export class HighwayPoint extends THREE.Vector2 {
+  bridgeHeight: number;
+  constructor(x: number, y: number, bridgeHeight: number) {
+    super(x, y);
+    this.bridgeHeight = bridgeHeight;
+  }
+}
 
 export const generateHighway = (
   width: number,
   height: number,
+  direction: THREE.Vector2 = new THREE.Vector2(1, 0)
 ) => {
+  const dir = direction.clone().normalize()
   const path: THREE.Vector3[] = []
-  const dir = new THREE.Vector2(1, 0)
-  const currentPos = new THREE.Vector2(0.01, height / 2)
+  const currentPos = new THREE.Vector2(width / 2, height / 2)
+  currentPos.multiply({
+    x: dir.y,
+    y: dir.x,
+  })
   
   do {
 
@@ -26,10 +38,10 @@ export const generateHighway = (
     const angleChange = 1.5 * Math.PI / 2 * (Math.random() - 0.5)
     dir.rotateAround(new THREE.Vector2(0, 0), angleChange)
 
-    if (dir.angleTo(new THREE.Vector2(1, 0)) > Math.PI / 4) {
+    if (dir.angleTo(direction) > Math.PI / 4) {
       dir.rotateAround(new THREE.Vector2(0, 0), -2 * angleChange)
     }
-  } while(currentPos.x < width && currentPos.y < height && currentPos.y > 0 && currentPos.x > 0)
+  } while(currentPos.x <= width && currentPos.y <= height && currentPos.y >= 0 && currentPos.x >= 0)
 
   const spline = new THREE.CatmullRomCurve3(path)
 
