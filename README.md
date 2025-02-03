@@ -12,8 +12,8 @@ So far got at least:
 - Bokeh
 - Bloom
 
+And like a procedural city thing
+
 Maybe will make a demo with this
 
-![out](https://github.com/user-attachments/assets/ff4992de-21d6-4ffe-a014-891c235b28ce)
-
-Easy 10 000+ lights in <2ms on M1 Pro
+![out](https://github.com/user-attachments/assets/603ed4e6-ea42-403c-a799-0f476864619d)
