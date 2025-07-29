@@ -28,6 +28,7 @@ precision highp float;
 in mat4 instanceMatrix;
 in vec3 color;
 in float intensity;
+in float flickerIntensity;
 
 out vec3 lightPositionVS;
 out vec3 vColor;
@@ -43,7 +44,7 @@ void main() {
   vec3 lightPositionWS = (mMatrix * vec4(0.0, 0.0, 0.0, 1.0) ).xyz;
   lightPositionVS = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-  float flicker = flicker(vec4(lightPositionWS, u_time));
+  float flicker = 1.0 - flicker(vec4(lightPositionWS, u_time)) * flickerIntensity;
   vColor = color * intensity * flicker;
 
   gl_Position = projectionMatrix * mvMatrix * vec4(position, 1.0);

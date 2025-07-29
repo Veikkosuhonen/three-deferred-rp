@@ -60,6 +60,7 @@ precision highp float;
 in vec3 tangent;
 in vec3 color;
 in vec3 emissive;
+in float flickerIntensity;
 
 uniform mat4 previousWorldMatrix;
 uniform mat4 previousViewMatrix;
@@ -107,7 +108,7 @@ void main() {
 
   vColor = color;
 
-  float flicker = flicker(vec4(lightPositionWS, u_time));
+  float flicker = 1.0 - flicker(vec4(lightPositionWS, u_time)) * flickerIntensity;
   vEmissive = emissive * flicker;
 
   vPositionCS = gl_Position;
@@ -143,6 +144,7 @@ export const lampMaterial = new THREE.ShaderMaterial({
     attributes: [
       { name: "color", size: 3 },
       { name: "emissive", size: 3 },
+      { name: "flickerIntensity", size: 1 },
     ],
   },
 });

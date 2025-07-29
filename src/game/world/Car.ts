@@ -4,12 +4,14 @@ import { LANE_WIDTH } from "./constants";
 
 const carColors = [0xffffff, 0xff1111, 0x1111ff, 0x111111, 0xaaaaaaa, 0xcccccc];
 
+export const carLightPositions: THREE.Vector3[] = []
+
 export class Car {
   road: Road;
   position: number;
   lane: number;
   object: THREE.Object3D;
-  light: THREE.PointLight;
+  lights: THREE.PointLight[] = [];
   direction: number = 1.0;
   speed: number;
 
@@ -33,7 +35,15 @@ export class Car {
       Math.atan2(road.direction.x, road.direction.y),
     );
 
-    this.light = new THREE.PointLight(0xffffff, 20.0);
+    this.lights[0] = new THREE.PointLight(0xffffff, 15.0);
+    this.object.add(this.lights[0]);
+    this.lights[0].userData.dynamic = true;
+    this.lights[0].userData.flickerIntensity = 0.0;
+
+    this.lights[1] = new THREE.PointLight(0xff1111, 13.0);
+    this.object.add(this.lights[1]);
+    this.lights[1].userData.dynamic = true;
+    this.lights[1].userData.flickerIntensity = 0.0;
   }
 
   update(deltaTime: number) {
@@ -57,10 +67,16 @@ export class Car {
       0.8,
       this.road.start.y + offset.y + laneOffset.y,
     );
-    this.light.position.set(
-      this.object.position.x,
-      this.object.position.y + 1.0,
-      this.object.position.z,
+    const lightOffset = this.road.direction.clone().multiplyScalar(2.5 * this.direction);
+    this.lights[0].position.set(
+      this.object.position.x + lightOffset.x,
+      this.object.position.y,
+      this.object.position.z + lightOffset.y,
+    );
+    this.lights[1].position.set(
+      this.object.position.x - lightOffset.x,
+      this.object.position.y,
+      this.object.position.z - lightOffset.y,
     );
   }
 }

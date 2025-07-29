@@ -11,7 +11,7 @@ import { gridMaterial } from './materials/gridMaterial';
 export const setupScene = (game: Game) => {
   const { props, lights, entities } = grid.generate()
   game.scene.add(props)
-  game.lights.add(lights)
+  game.lights.add(...lights.children)
   game.entities.push(...entities)
 
   game.scene.traverse(obj => configureSceneObjects(obj, game))

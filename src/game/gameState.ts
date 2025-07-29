@@ -1,6 +1,8 @@
 import { ISheet } from "@theatre/core";
 import * as THREE from "three";
 import { Entity } from "./world/blocks";
+import { MATRIX } from "./math";
+import { carLightPositions } from "./world/Car";
 
 export class Game {
   renderer: THREE.WebGLRenderer;
@@ -22,5 +24,20 @@ export class Game {
 
   update(deltaTime: number) {
     this.entities.forEach(entity => entity.update(deltaTime))
+  
+    const carLights = this.lights.children.find(l => l.userData.carLights) as THREE.Mesh | undefined;
+    if (carLights) {
+      const geometry = carLights.geometry as THREE.InstancedBufferGeometry;
+      const attribute = geometry.getAttribute("instanceMatrix");
+      const buffer = attribute.array as Float32Array;
+      // console.log("Updating car lights positions", carLights.count, carLightPositions.length);
+      for (let i = 0; i < carLightPositions.length; i++) {
+
+        MATRIX.fromArray(buffer, i * 16);
+        MATRIX.setPosition(carLightPositions[i]);
+        MATRIX.toArray(buffer, i * 16);
+      }
+      attribute.needsUpdate = true;
+    }
   }
 }

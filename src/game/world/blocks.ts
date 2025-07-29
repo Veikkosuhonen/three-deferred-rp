@@ -3,7 +3,7 @@ import { generate } from "./city";
 import { generateHighway } from "./highway";
 import { SceneObject } from "./objects";
 import { Road } from "./Road";
-import { Car } from "./Car";
+import { Car, carLightPositions } from "./Car";
 import { AttributeDesc } from "../types";
 import { gBufferShaderAttributes } from "../shaders/gbuffer";
 import { lightningShaderInstanced } from "../shaders/lighting";
@@ -62,6 +62,8 @@ export const grid = {
     const instancedObjs = generate(this.width, this.height, highways);
     instancedObjs.forEach((obj) => group.add(obj.toObject3D()));
 
+    const carLightDatas: THREE.PointLight[] = [];
+
     // Cars
     instancedObjs
       .filter((obj) => obj instanceof Road)
@@ -73,12 +75,18 @@ export const grid = {
             const car = new Car(road, pos, lane);
             entities.push(car);
             group.add(car.object);
-            lights.add(car.light);
+
+            car.lights.forEach(light => {
+              light.scale.setScalar(3 * light.intensity);
+              light.updateMatrixWorld();
+              carLightDatas.push(light);
+              carLightPositions.push(light.position); // now their indexes match
+            })
           }
         }
       });
 
-    const lightDatas: THREE.PointLight[] = [];
+    const staticLightDatas: THREE.PointLight[] = [];
 
     const boxes: SceneObject[] = [];
     const spheres: SceneObject[] = [];
@@ -104,11 +112,11 @@ export const grid = {
         toRemove.push(obj);
       }
 
-      if (obj instanceof THREE.PointLight) {
+      if (obj instanceof THREE.PointLight && !obj.userData.dynamic) {
         obj.scale.setScalar(3 * obj.intensity);
         obj.updateMatrixWorld();
 
-        lightDatas.push(obj);
+        staticLightDatas.push(obj);
       }
     });
 
@@ -118,7 +126,8 @@ export const grid = {
       boxes: boxes.length,
       spheres: spheres.length,
       cylinders: cylinders.length,
-      lights: lightDatas.length,
+      lights: staticLightDatas.length,
+      dynamicLights: carLightDatas.length,
       entities: entities.length,
     });
 
@@ -142,7 +151,10 @@ export const grid = {
     );
 
     lights.position.copy(group.position);
-    lights.add(this.buildInstancedLights(lightDatas));
+    lights.add(this.buildInstancedLights(staticLightDatas));
+    const carLights = this.buildInstancedLights(carLightDatas);
+    carLights.userData.carLights = true;
+    lights.add(carLights);
 
     console.timeEnd("generate");
 
@@ -221,6 +233,7 @@ export const grid = {
     const matrixArray = new Float32Array(lightDatas.length * 16);
     const colorArray = new Float32Array(lightDatas.length * 3);
     const intensityArray = new Float32Array(lightDatas.length);
+    const flickerIntensityArray = new Float32Array(lightDatas.length);
 
     for (let i = 0; i < lightDatas.length; i++) {
       const light = lightDatas[i];
@@ -228,6 +241,7 @@ export const grid = {
       light.matrixWorld.toArray(matrixArray, i * 16);
       light.color.toArray(colorArray, i * 3);
       intensityArray[i] = light.intensity;
+      flickerIntensityArray[i] = light.userData.flickerIntensity || 0.0;
     }
 
     lightInstanced.setAttribute(
@@ -241,6 +255,10 @@ export const grid = {
     lightInstanced.setAttribute(
       "intensity",
       new THREE.InstancedBufferAttribute(intensityArray, 1),
+    );
+    lightInstanced.setAttribute(
+      "flickerIntensity",
+      new THREE.InstancedBufferAttribute(flickerIntensityArray, 1),
     );
 
     const lights = new THREE.Mesh(lightInstanced, lightningShaderInstanced);
