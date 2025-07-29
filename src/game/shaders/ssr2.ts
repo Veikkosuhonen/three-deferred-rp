@@ -30,7 +30,7 @@ vec3 random3(vec2 p) {
   return fract((p3.xxy + p3.yzz) * p3.zyx);
 }
 
-const int MAX_STEPS = 300;
+const int MAX_STEPS = 100;
 
 const int N_SAMPLES = 1;
 
@@ -98,12 +98,12 @@ void main() {
   float avgDist = 0.0;
 
   for (int i = 0; i < N_SAMPLES; i++) {
-    vec2 jitterSeed = uv + float(i) + u_time * 0.1;
+    vec2 jitterSeed = uv + float(i) + u_time * 0.01;
     vec3 jitter = roughness * roughness * (2.0 * random3(jitterSeed).xyz - 1.0);
-    vec3 sampleReflection = normalize(R + jitter);
-  
+    vec3 sampleReflection = normalize(R);
+
     HitData hitData = HitData(vec2(0.0), 0.0);
-    
+
     vec3 viewPosition = positionVS;
 
     vec2 d0 = gl_FragCoord.xy;
@@ -240,10 +240,14 @@ export const ssrShader = new THREE.RawShaderMaterial({
   },
 });
 
-ssrShader.onBeforeRender = (renderer, scene, camera: THREE.PerspectiveCamera) => {
+ssrShader.onBeforeRender = (
+  renderer,
+  scene,
+  camera: THREE.PerspectiveCamera,
+) => {
   ssrShader.uniforms.cameraNear.value = camera.near;
   ssrShader.uniforms.cameraFar.value = camera.far;
-}
+};
 
 const ssrResolveShaderFS = /* glsl */ `
 precision highp float;

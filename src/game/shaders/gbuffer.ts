@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+import * as THREE from "three";
+import { AttributeDesc } from "../types";
 
 /**
  * G-Buffer shader
@@ -172,21 +173,42 @@ void main() {
 }
 `;
 
-export const getVariantKey = (useMap: boolean, useNormalMap: boolean, useOrmMap: boolean, useEmissionMap: boolean, useInstancing: boolean) => {
-  return (useInstancing ? 16 : 0) | (useMap ? 8 : 0) | (useNormalMap ? 4 : 0) | (useOrmMap ? 2 : 0) | (useEmissionMap ? 1 : 0);
-}
+export const getVariantKey = (
+  useMap: boolean,
+  useNormalMap: boolean,
+  useOrmMap: boolean,
+  useEmissionMap: boolean,
+  useInstancing: boolean,
+) => {
+  return (
+    (useInstancing ? 16 : 0) |
+    (useMap ? 8 : 0) |
+    (useNormalMap ? 4 : 0) |
+    (useOrmMap ? 2 : 0) |
+    (useEmissionMap ? 1 : 0)
+  );
+};
 
 export const gBufferShaderVariants: Record<number, THREE.ShaderMaterial> = {};
 
 (() => {
-
   // Five bits for USE_MAP, USE_NORMAL_MAP, USE_ORM_MAP, USE_EMISSION_MAP, USE_INSTANCING
   for (let use_map = 0; use_map < 2; use_map++) {
     for (let use_normal_map = 0; use_normal_map < 2; use_normal_map++) {
       for (let use_orm_map = 0; use_orm_map < 2; use_orm_map++) {
-        for (let use_emission_map = 0; use_emission_map < 2; use_emission_map++) {
+        for (
+          let use_emission_map = 0;
+          use_emission_map < 2;
+          use_emission_map++
+        ) {
           for (let use_instancing = 0; use_instancing < 2; use_instancing++) {
-            const key = getVariantKey(!!use_map, !!use_normal_map, !!use_orm_map, !!use_emission_map, !!use_instancing);
+            const key = getVariantKey(
+              !!use_map,
+              !!use_normal_map,
+              !!use_orm_map,
+              !!use_emission_map,
+              !!use_instancing,
+            );
 
             const defines: Record<string, string> = {};
             const materialKeys: string[] = [];
@@ -198,13 +220,34 @@ export const gBufferShaderVariants: Record<number, THREE.ShaderMaterial> = {};
             const addMaterialKey = (key: string, value: any) => {
               materialKeys.push(key);
               uniforms[key] = { value };
-            }
+            };
 
-            if (use_map) {          defines.USE_MAP = "";          addMaterialKey("map", null) }          else { addMaterialKey("color", new THREE.Color()); }
-            if (use_normal_map) {   defines.USE_NORMAL_MAP = "";   addMaterialKey("normalMap", null) }
-            if (use_orm_map) {      defines.USE_ORM_MAP = "";      addMaterialKey("roughnessMap", null) } else { addMaterialKey("roughness", 0.001); addMaterialKey("metalness", 0.0); }
-            if (use_emission_map) { defines.USE_EMISSION_MAP = ""; addMaterialKey("emissiveMap", null) }  else { addMaterialKey("emissive", new THREE.Color()); }
-            if (use_instancing) { defines.USE_INSTANCING = ""; }
+            if (use_map) {
+              defines.USE_MAP = "";
+              addMaterialKey("map", null);
+            } else {
+              addMaterialKey("color", new THREE.Color());
+            }
+            if (use_normal_map) {
+              defines.USE_NORMAL_MAP = "";
+              addMaterialKey("normalMap", null);
+            }
+            if (use_orm_map) {
+              defines.USE_ORM_MAP = "";
+              addMaterialKey("roughnessMap", null);
+            } else {
+              addMaterialKey("roughness", 0.001);
+              addMaterialKey("metalness", 0.0);
+            }
+            if (use_emission_map) {
+              defines.USE_EMISSION_MAP = "";
+              addMaterialKey("emissiveMap", null);
+            } else {
+              addMaterialKey("emissive", new THREE.Color());
+            }
+            if (use_instancing) {
+              defines.USE_INSTANCING = "";
+            }
             addMaterialKey("emissiveIntensity", 1.0);
 
             gBufferShaderVariants[key] = new THREE.ShaderMaterial({
@@ -236,3 +279,8 @@ export const gBufferShaderVariants: Record<number, THREE.ShaderMaterial> = {};
 
   console.log("G-Buffer shader variants", gBufferShaderVariants);
 })();
+
+export const gBufferShaderAttributes: AttributeDesc[] = [
+  { name: "color", size: 3 },
+  { name: "emissive", size: 3 },
+];

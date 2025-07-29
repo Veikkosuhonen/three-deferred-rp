@@ -1,20 +1,23 @@
-import * as THREE from "three"
-import { generate } from "./city"
-import { generateHighway } from "./highway"
-import { SceneObject } from "./objects"
-import { Road } from "./Road"
-import { Car } from "./Car"
+import * as THREE from "three";
+import { generate } from "./city";
+import { generateHighway } from "./highway";
+import { SceneObject } from "./objects";
+import { Road } from "./Road";
+import { Car } from "./Car";
+import { AttributeDesc } from "../types";
+import { gBufferShaderAttributes } from "../shaders/gbuffer";
+import { lightningShaderInstanced } from "../shaders/lighting";
 
-export type BlockGen = () => THREE.Object3D
+export type BlockGen = () => THREE.Object3D;
 
 type GeneratorResult = {
-  props: THREE.Object3D,
-  lights: THREE.Object3D,
-  entities: Entity[],
-}
+  props: THREE.Object3D;
+  lights: THREE.Object3D;
+  entities: Entity[];
+};
 
 export interface Entity {
-  update(deltaTime: number): void
+  update(deltaTime: number): void;
 }
 
 export const grid = {
@@ -22,191 +25,228 @@ export const grid = {
   height: 1000,
 
   generate(): GeneratorResult {
-    console.time('generate')
+    console.time("generate");
 
-    const group = new THREE.Group()
-    const lights = new THREE.Group()
-    const entities: Entity[] = []
+    const group = new THREE.Group();
+    const lights = new THREE.Group();
+    const entities: Entity[] = [];
 
     // Ground
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.width, this.height),
-      new THREE.MeshPhysicalMaterial()
-    )
+      new THREE.PlaneGeometry(this.width * 100, this.height * 100),
+      new THREE.MeshPhysicalMaterial(),
+    );
     ground.material.color.multiplyScalar(0.6);
-    ground.rotation.x = -Math.PI / 2
-    ground.position.set(this.width / 2, 0, this.height / 2)
-    group.add(ground)
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(this.width / 2, -4, this.height / 2);
+    ground.frustumCulled = false;
+    group.add(ground);
 
     // Highways
     const highways = [
-      { dir: new THREE.Vector2(1, 0), bridgeHeight: 9 },
-      { dir: new THREE.Vector2(0, 1), bridgeHeight: 17 },
+      { dir: new THREE.Vector2(1, 0), bridgeHeight: 8 },
+      { dir: new THREE.Vector2(0, 1), bridgeHeight: 16 },
     ].map(({ dir, bridgeHeight }) => {
-      const { obj: highway, path } = generateHighway(this.width, this.height, dir)
-      highway.position.set(0, bridgeHeight, 0)
-      path.points.forEach(p => p.y = bridgeHeight)
-      group.add(highway)
-      return path
-    })
+      const { obj: highway, path } = generateHighway(
+        this.width,
+        this.height,
+        dir,
+      );
+      highway.position.set(0, bridgeHeight, 0);
+      path.points.forEach((p) => (p.y = bridgeHeight));
+      group.add(highway);
+      return path;
+    });
 
     // City
-    const instancedObjs = generate(this.width, this.height, highways)
-    instancedObjs.forEach(obj => group.add(obj.toObject3D()))
+    const instancedObjs = generate(this.width, this.height, highways);
+    instancedObjs.forEach((obj) => group.add(obj.toObject3D()));
 
     // Cars
-    instancedObjs.filter(obj => obj instanceof Road).forEach(road => {
-      for (let lane = 1; lane <= road.lanes/2; lane++) {
-        for (let pos = 0; pos < road.length; pos += 10) {
-          if (Math.random() > 0.2) continue;
+    instancedObjs
+      .filter((obj) => obj instanceof Road)
+      .forEach((road) => {
+        for (let lane = 1; lane <= road.lanes / 2; lane++) {
+          for (let pos = 0; pos < road.length; pos += 10) {
+            if (Math.random() > 0.2) continue;
 
-          const car = new Car(road, pos, lane)
-          entities.push(car)
-          group.add(car.object)
-          lights.add(car.light)
+            const car = new Car(road, pos, lane);
+            entities.push(car);
+            group.add(car.object);
+            lights.add(car.light);
+          }
         }
-      }
-    })
+      });
 
-    const lightDatas: THREE.PointLight[] = []
+    const lightDatas: THREE.PointLight[] = [];
 
-    const boxesCustomShader: SceneObject[] = []
-    const boxes: SceneObject[] = []
-    const spheres: SceneObject[] = []
-    const cylinders: SceneObject[] = []
+    const boxes: SceneObject[] = [];
+    const spheres: SceneObject[] = [];
+    const cylinders: SceneObject[] = [];
 
-    const toRemove: THREE.Object3D[] = []
-  
-    group.traverse(obj => {
-      obj.updateMatrixWorld()
-      let remove = true
-    
+    const toRemove: THREE.Object3D[] = [];
+
+    group.traverse((obj) => {
+      obj.updateMatrixWorld();
+      let remove = true;
+
       if (obj.userData.box) {
-        const obj1 = obj as SceneObject
-        if (obj1.material.customShader) {
-          boxesCustomShader.push(obj1)
-        } else {
-          boxes.push(obj1)
-        }
+        boxes.push(obj as SceneObject);
       } else if (obj.userData.sphere) {
-        spheres.push(obj as SceneObject)
+        spheres.push(obj as SceneObject);
       } else if (obj.userData.cylinder) {
-        cylinders.push(obj as SceneObject)
+        cylinders.push(obj as SceneObject);
       } else {
-        remove = false
+        remove = false;
       }
 
       if (remove) {
-        toRemove.push(obj)
+        toRemove.push(obj);
       }
 
       if (obj instanceof THREE.PointLight) {
-        obj.scale.setScalar(3 * obj.intensity)
-        obj.updateMatrixWorld()
+        obj.scale.setScalar(3 * obj.intensity);
+        obj.updateMatrixWorld();
 
-        lightDatas.push(obj)
+        lightDatas.push(obj);
       }
-    })
+    });
 
-    toRemove.forEach(obj => obj.removeFromParent())
+    toRemove.forEach((obj) => obj.removeFromParent());
 
     console.table({
-      boxesCustomShader: boxesCustomShader.length,
       boxes: boxes.length,
       spheres: spheres.length,
       cylinders: cylinders.length,
       lights: lightDatas.length,
       entities: entities.length,
-    })
+    });
 
-    group.add(this.buildInstanced(
-      new THREE.BoxGeometry(),
-      boxesCustomShader,
-    ))
+    const boxInstancingGroups: Record<string, SceneObject[]> = {};
+    boxes.forEach((b) => {
+      const shaderName = b.material.customShader?.name ?? "default";
+      boxInstancingGroups[shaderName] = boxInstancingGroups[shaderName] || [];
+      boxInstancingGroups[shaderName].push(b);
+    });
+    Object.entries(boxInstancingGroups).forEach(([shaderName, boxes]) => {
+      console.log(shaderName, boxes.length);
+      if (boxes.length > 0) {
+        group.add(this.buildInstanced(new THREE.BoxGeometry(), boxes));
+      }
+    });
 
-    group.add(this.buildInstanced(
-      new THREE.BoxGeometry(),
-      boxes,
-    ))
+    group.add(this.buildInstanced(new THREE.SphereGeometry(1, 16, 8), spheres));
 
-    group.add(this.buildInstanced(
-      new THREE.SphereGeometry(1, 16, 8),
-      spheres,
-    ))
+    group.add(
+      this.buildInstanced(new THREE.CylinderGeometry(1, 1, 1, 16), cylinders),
+    );
 
-    group.add(this.buildInstanced(
-      new THREE.CylinderGeometry(1, 1, 1, 16),
-      cylinders
-    ))
+    lights.position.copy(group.position);
+    lights.add(this.buildInstancedLights(lightDatas));
 
-    lights.position.copy(group.position)
-    lights.add(this.buildInstancedLights(lightDatas))
-
-    console.timeEnd('generate')
+    console.timeEnd("generate");
 
     return {
       props: group,
       lights,
       entities,
-    }
+    };
   },
 
   buildInstanced(geom: THREE.BufferGeometry, objs: SceneObject[]): THREE.Mesh {
-    const instanced = new THREE.InstancedBufferGeometry()
-    instanced.index = geom.index
-    instanced.attributes.position = geom.attributes.position
-    instanced.attributes.normal = geom.attributes.normal
+    const instanced = new THREE.InstancedBufferGeometry();
+    instanced.index = geom.index;
+    instanced.attributes.position = geom.attributes.position;
+    instanced.attributes.normal = geom.attributes.normal;
 
-    const matrixArray = new Float32Array(objs.length * 16)
-    const colorArray = new Float32Array(objs.length * 3)
-    const emissiveArray = new Float32Array(objs.length * 3)
+    const matrixArray = new Float32Array(objs.length * 16);
+    const attributeArrays = [] as {
+      desc: AttributeDesc;
+      array: Float32Array;
+    }[];
+    const attributeDescs =
+      objs[0].material.customShader?.userData?.attributes ??
+      (gBufferShaderAttributes as AttributeDesc[]);
+    console.log(attributeDescs);
+
+    attributeDescs.forEach((attr) => {
+      attributeArrays.push({
+        desc: attr,
+        array: new Float32Array(objs.length * attr.size),
+      });
+    });
 
     for (let i = 0; i < objs.length; i++) {
-      objs[i].matrixWorld.toArray(matrixArray, i * 16)
-      objs[i].material.color.toArray(colorArray, i * 3)
-      objs[i].material.emissive.toArray(emissiveArray, i * 3)
+      objs[i].matrixWorld.toArray(matrixArray, i * 16);
+      attributeArrays.forEach(({ desc, array }) => {
+        const attrValue = objs[i].material[desc.name];
+        if (typeof attrValue === "number") {
+          array.set([attrValue], i * desc.size);
+        } else {
+          attrValue.toArray(array, i * desc.size);
+        }
+      });
     }
 
-    instanced.setAttribute('instanceMatrix', new THREE.InstancedBufferAttribute(matrixArray, 16))
-    instanced.setAttribute('color', new THREE.InstancedBufferAttribute(colorArray, 3))
-    instanced.setAttribute('emissive', new THREE.InstancedBufferAttribute(emissiveArray, 3))
+    instanced.setAttribute(
+      "instanceMatrix",
+      new THREE.InstancedBufferAttribute(matrixArray, 16),
+    );
+    attributeArrays.forEach(({ desc, array }) => {
+      instanced.setAttribute(
+        desc.name,
+        new THREE.InstancedBufferAttribute(array, desc.size),
+      );
+    });
 
-    const mesh = new THREE.Mesh(instanced, objs[0].material.customShader ?? new THREE.MeshPhysicalMaterial())
+    const mesh = new THREE.Mesh(
+      instanced,
+      objs[0].material.customShader ?? new THREE.MeshPhysicalMaterial(),
+    );
 
     mesh.userData.instanced = true;
 
-    mesh.frustumCulled = false
+    mesh.frustumCulled = false;
 
-    return mesh
+    return mesh;
   },
 
   buildInstancedLights(lightDatas: THREE.PointLight[]): THREE.Mesh {
-    const sphereGeometry = new THREE.SphereGeometry()
-  
-    const lightInstanced = new THREE.InstancedBufferGeometry()
-    lightInstanced.index = sphereGeometry.index
-    lightInstanced.attributes.position = sphereGeometry.attributes.position
+    const sphereGeometry = new THREE.SphereGeometry();
 
-    const matrixArray = new Float32Array(lightDatas.length * 16)
-    const colorArray = new Float32Array(lightDatas.length * 3)
-    const intensityArray = new Float32Array(lightDatas.length)
+    const lightInstanced = new THREE.InstancedBufferGeometry();
+    lightInstanced.index = sphereGeometry.index;
+    lightInstanced.attributes.position = sphereGeometry.attributes.position;
+
+    const matrixArray = new Float32Array(lightDatas.length * 16);
+    const colorArray = new Float32Array(lightDatas.length * 3);
+    const intensityArray = new Float32Array(lightDatas.length);
 
     for (let i = 0; i < lightDatas.length; i++) {
-      const light = lightDatas[i]
+      const light = lightDatas[i];
 
-      light.matrixWorld.toArray(matrixArray, i * 16)
-      light.color.toArray(colorArray, i * 3)
-      intensityArray[i] = light.intensity
+      light.matrixWorld.toArray(matrixArray, i * 16);
+      light.color.toArray(colorArray, i * 3);
+      intensityArray[i] = light.intensity;
     }
 
-    lightInstanced.setAttribute('instanceMatrix', new THREE.InstancedBufferAttribute(matrixArray, 16))
-    lightInstanced.setAttribute('color', new THREE.InstancedBufferAttribute(colorArray, 3))
-    lightInstanced.setAttribute('intensity', new THREE.InstancedBufferAttribute(intensityArray, 1))
+    lightInstanced.setAttribute(
+      "instanceMatrix",
+      new THREE.InstancedBufferAttribute(matrixArray, 16),
+    );
+    lightInstanced.setAttribute(
+      "color",
+      new THREE.InstancedBufferAttribute(colorArray, 3),
+    );
+    lightInstanced.setAttribute(
+      "intensity",
+      new THREE.InstancedBufferAttribute(intensityArray, 1),
+    );
 
-    const lights = new THREE.Mesh(lightInstanced,);
+    const lights = new THREE.Mesh(lightInstanced, lightningShaderInstanced);
 
-    lights.frustumCulled = false
+    lights.frustumCulled = false;
 
-    return lights
+    return lights;
   },
-}
+};

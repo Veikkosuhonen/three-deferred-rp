@@ -1,14 +1,9 @@
-import { render } from 'solid-js/web';
+import "./index.css";
 
-import './index.css';
-import App from './App';
+import { start } from "./game/game";
 
-const root = document.getElementById('root');
+const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
-if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
-  throw new Error(
-    'Root element not found. Did you forget to add it to your index.html? Or maybe the id attribute got misspelled?',
-  );
+if (canvas) {
+  start(canvas);
 }
-
-render(() => <App />, root!);

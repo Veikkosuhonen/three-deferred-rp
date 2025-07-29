@@ -3,6 +3,27 @@ import * as THREE from "three";
 const lightningShaderVS = /* glsl */ `
 precision highp float;
 
+in vec3 color;
+in float intensity;
+
+out vec3 lightPositionVS;
+out vec3 vColor;
+
+void main() {
+  mat4 mMatrix = modelMatrix;
+  mat4 mvMatrix = modelViewMatrix;
+
+  vColor = color * intensity;
+
+  lightPositionVS = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+  gl_Position = projectionMatrix * mvMatrix * vec4(position, 1.0);
+}
+`;
+
+const lightningShaderInstancedVS = /* glsl */ `
+precision highp float;
+
 in mat4 instanceMatrix;
 in vec3 color;
 in float intensity;
@@ -95,12 +116,12 @@ void main() {
   vec3 F0 = vec3(0.04);
   F0 = mix(F0, albedo, metalness);
   vec3 F = F0 + (1.0 - F0) * pow(clamp(1.0 - max(dot(H, V), 0.0), 0.0, 1.0), 5.0);
-  
+
   float ndotl = max(dot(N, L), 0.0);
 
   vec3 numerator    = NDF * G * F;
   float denominator = 4.0 * max(dot(N, V), 0.0) * ndotl + 0.0001;
-  vec3 specular     = numerator / denominator; 
+  vec3 specular     = numerator / denominator;
 
   float dist = length(lightPositionVS - position);
   float attenuation = 1.0 / (1.0 + dist * dist);
@@ -120,6 +141,37 @@ void main() {
 
 export const lightningShader = new THREE.ShaderMaterial({
   vertexShader: lightningShaderVS,
+  fragmentShader: lightningShaderFS,
+  side: THREE.BackSide,
+  glslVersion: "300 es",
+  blending: THREE.AdditiveBlending,
+  transparent: true,
+  depthWrite: false,
+  depthTest: false,
+
+  stencilWrite: true,
+  stencilFunc: THREE.EqualStencilFunc,
+  stencilZPass: THREE.KeepStencilOp,
+  stencilFail: THREE.KeepStencilOp,
+  stencilZFail: THREE.KeepStencilOp,
+  stencilFuncMask: 0xff,
+  stencilWriteMask: 0xff,
+  stencilRef: 1,
+
+  uniforms: {
+    gColorAo: { value: null },
+    gNormalRoughness: { value: null },
+    gPositionMetalness: { value: null },
+    u_resolution: { value: new THREE.Vector2() },
+    lightPositionVS: { value: new THREE.Vector3() },
+    lightColor: { value: new THREE.Color() },
+    //modelViewMatrix: { value: new THREE.Matrix4() },
+    //projectionMatrix: { value: new THREE.Matrix4() },
+  },
+});
+
+export const lightningShaderInstanced = new THREE.ShaderMaterial({
+  vertexShader: lightningShaderInstancedVS,
   fragmentShader: lightningShaderFS,
   side: THREE.BackSide,
   glslVersion: "300 es",

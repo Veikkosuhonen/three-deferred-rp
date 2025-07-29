@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 const buildingShaderFS = /* glsl */ `
 precision highp float;
@@ -34,21 +34,21 @@ void main() {
   float isWindow = isWall * isWindowRow;
 
   float windowCheckers = mod(sin(floorN * 20.0) * floor(vPositionWS.x + vPositionWS.z), 10.0);
-  windowCheckers *= step(windowCheckers, 1.0) 
+  windowCheckers *= step(windowCheckers, 1.0)
     + step(4.0, windowCheckers) * step(windowCheckers, 5.0)
     + step(5.0, windowCheckers) * step(windowCheckers, 10.0) * step(floorN, 2.0);
   windowCheckers = mod(windowCheckers, 4.0);
-  windowCheckers *= 0.6;
+  // windowCheckers *= 0.6;
 
   float isLitWindow = isWindow * windowCheckers;
 
-  float roughness = 1.0 - isWindow * 0.8;
+  float roughness = 1.0 - isWindow * 0.9;
   float metallic = 0.0;
   vec3 emissive = vec3(1.0, 0.75, 0.25);
   float emissiveIntensity = isLitWindow;
 
   vec3 orm = vec3(1.0, roughness, metallic);
-  
+
   vec3 currentPosNDC = vPositionCS.xyz / vPositionCS.w;
   vec3 previousPosNDC = vPreviousPositionCS.xyz / vPreviousPositionCS.w;
   vec2 velocity = currentPosNDC.xy - previousPosNDC.xy;
@@ -86,7 +86,7 @@ out vec3 vNormal;
 out vec3 vNormalWS;
 out vec3 vColor;
 
-void main() { 
+void main() {
   //#ifdef USE_INSTANCING
   mat4 mMatrix = modelMatrix * instanceMatrix;
   mat4 mvMatrix = viewMatrix * mMatrix;
@@ -122,30 +122,30 @@ void main() {
 `;
 
 export const buildingMaterial = new THREE.ShaderMaterial({
-    vertexShader: buildingShaderVS,
-    fragmentShader: buildingShaderFS,
-    uniforms: {
-      previousWorldMatrix: { value: new THREE.Matrix4() },
-      previousViewMatrix: { value: new THREE.Matrix4() },
-      // emissive: { value: new THREE.Color(0x000000) },
-      // emissiveIntensity: { value: 0.0 },
-    },
-    defines: {
-      USE_INSTANCING: "",
-    },
-    side: THREE.FrontSide,
-    glslVersion: "300 es",
-    depthWrite: true,
-    transparent: false,
-    stencilWrite: true,
-    stencilFunc: THREE.AlwaysStencilFunc,
-    stencilZPass: THREE.ReplaceStencilOp,
-    stencilFail: THREE.ReplaceStencilOp,
-    stencilZFail: THREE.ReplaceStencilOp,
-    stencilFuncMask: 0xff,
-    stencilWriteMask: 0xff,
-    stencilRef: 1,
-    userData: {
-      materialKeys: [],
-    },
+  name: "BuildingMaterial",
+  vertexShader: buildingShaderVS,
+  fragmentShader: buildingShaderFS,
+  uniforms: {
+    previousWorldMatrix: { value: new THREE.Matrix4() },
+    previousViewMatrix: { value: new THREE.Matrix4() },
+  },
+  defines: {
+    USE_INSTANCING: "",
+  },
+  side: THREE.FrontSide,
+  glslVersion: "300 es",
+  depthWrite: true,
+  transparent: false,
+  stencilWrite: true,
+  stencilFunc: THREE.AlwaysStencilFunc,
+  stencilZPass: THREE.ReplaceStencilOp,
+  stencilFail: THREE.ReplaceStencilOp,
+  stencilZFail: THREE.ReplaceStencilOp,
+  stencilFuncMask: 0xff,
+  stencilWriteMask: 0xff,
+  stencilRef: 1,
+  userData: {
+    materialKeys: [],
+    attributes: [{ name: "color", size: 3 }],
+  },
 });
