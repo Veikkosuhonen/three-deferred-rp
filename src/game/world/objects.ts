@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { lampMaterial } from "../materials/lamp";
 
 export class ObjectMaterialData {
   color: THREE.Color;
@@ -29,6 +30,7 @@ export const lampPost = () => {
 
   const lamp = sphereInstance();
   lamp.material.emissive.setHex(color).multiplyScalar(15.0);
+  lamp.material.customShader = lampMaterial
   lamp.scale.setScalar(0.4);
   lamp.position.add({ x: 0, y: 5.0, z: 0.0 });
   b.add(lamp);

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { flicker } from "./lib/flicker";
 
 const lightningShaderVS = /* glsl */ `
 precision highp float;
@@ -31,13 +32,19 @@ in float intensity;
 out vec3 lightPositionVS;
 out vec3 vColor;
 
+uniform float u_time;
+
+${flicker}
+
 void main() {
   mat4 mMatrix = modelMatrix * instanceMatrix;
   mat4 mvMatrix = viewMatrix * mMatrix;
 
-  vColor = color * intensity;
-
+  vec3 lightPositionWS = (mMatrix * vec4(0.0, 0.0, 0.0, 1.0) ).xyz;
   lightPositionVS = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+  float flicker = flicker(vec4(lightPositionWS, u_time));
+  vColor = color * intensity * flicker;
 
   gl_Position = projectionMatrix * mvMatrix * vec4(position, 1.0);
 }
@@ -196,6 +203,7 @@ export const lightningShaderInstanced = new THREE.ShaderMaterial({
     u_resolution: { value: new THREE.Vector2() },
     lightPositionVS: { value: new THREE.Vector3() },
     lightColor: { value: new THREE.Color() },
+    u_time: { value: 0 },
     //modelViewMatrix: { value: new THREE.Matrix4() },
     //projectionMatrix: { value: new THREE.Matrix4() },
   },

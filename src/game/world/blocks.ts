@@ -169,7 +169,7 @@ export const grid = {
       (gBufferShaderAttributes as AttributeDesc[]);
     console.log(attributeDescs);
 
-    attributeDescs.forEach((attr) => {
+    attributeDescs.forEach((attr: any) => {
       attributeArrays.push({
         desc: attr,
         array: new Float32Array(objs.length * attr.size),

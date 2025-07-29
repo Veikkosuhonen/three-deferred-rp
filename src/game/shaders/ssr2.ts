@@ -30,7 +30,7 @@ vec3 random3(vec2 p) {
   return fract((p3.xxy + p3.yzz) * p3.zyx);
 }
 
-const int MAX_STEPS = 100;
+const int MAX_STEPS = 2400;
 
 const int N_SAMPLES = 1;
 

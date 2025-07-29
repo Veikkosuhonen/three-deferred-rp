@@ -89,8 +89,8 @@ export const setupPipeline = async (game: Game) => {
 
   composer.addPass(new BokehPass(gBuffer, game.mainCamera));
 
-  const bloomPass = new BloomPass(0.1, 0.005);
-  composer.addPass(bloomPass);
+  // const bloomPass = new BloomPass(0.1, 0.005);
+  // composer.addPass(bloomPass);
   // composer.addPass(new DebugPass(lightBuffer.textures[0]));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 

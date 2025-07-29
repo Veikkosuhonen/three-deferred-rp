@@ -27,7 +27,7 @@ void main() {
 
   float factor = ( focus + viewZ ); // viewZ is <= 0, so this is a difference equation
 
-  vec2 dofblur = vec2 ( clamp( factor * aperture, -maxBlur, maxBlur ) );
+  vec2 dofblur = vec2 ( clamp( factor * aperture * 0.01, -maxBlur, maxBlur ) );
 
   vec2 dofblur9 = dofblur * 0.9;
   vec2 dofblur7 = dofblur * 0.7;

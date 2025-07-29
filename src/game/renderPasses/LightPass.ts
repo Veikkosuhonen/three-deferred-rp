@@ -45,6 +45,9 @@ export class LightPass extends RenderPass {
     renderer.setRenderTarget(this.lightBuffer);
     renderer.clear(true, true, false);
 
+    lightningShaderInstanced.uniforms.u_time.value = performance.now() / 1000;
+
+
     renderer.render(this.lightScene, this.camera);
   }
 }

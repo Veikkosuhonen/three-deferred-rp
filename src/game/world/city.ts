@@ -29,10 +29,10 @@ export const generate = (
     for (let i = 0; i < 150; i++) {
       const t = i / 150;
       const p = path.getPoint(t);
-      const n = path
-        .getTangent(t)
-        .applyEuler(ROTATE_90)
-        .multiplyScalar(HIGHWAY_WIDTH * 0.8);
+      // const n = path
+      //   .getTangent(t)
+      //   .applyEuler(ROTATE_90)
+      //   .multiplyScalar(HIGHWAY_WIDTH * 0.8);
       // const p1 = p.clone().add(n);
       // const p2 = p.clone().sub(n);
       points.push(
