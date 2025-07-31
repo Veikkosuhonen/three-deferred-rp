@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { PassProps, RenderPass } from "./RenderPass";
 import { lightningShader } from "../shaders";
 import { lightningShaderInstanced } from "../shaders/lighting";
+import player from "../timeline";
 
 export class LightPass extends RenderPass {
   lightScene: THREE.Scene;
@@ -45,8 +46,7 @@ export class LightPass extends RenderPass {
     renderer.setRenderTarget(this.lightBuffer);
     renderer.clear(true, true, false);
 
-    lightningShaderInstanced.uniforms.u_time.value = performance.now() / 1000;
-
+    lightningShaderInstanced.uniforms.u_time.value = player.currentTime;
 
     renderer.render(this.lightScene, this.camera);
   }

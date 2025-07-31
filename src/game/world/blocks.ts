@@ -21,8 +21,8 @@ export interface Entity {
 }
 
 export const grid = {
-  width: 2000,
-  height: 2000,
+  width: 1000,
+  height: 1000,
 
   generate(): GeneratorResult {
     console.time("generate");
@@ -76,12 +76,12 @@ export const grid = {
             entities.push(car);
             group.add(car.object);
 
-            car.lights.forEach(light => {
+            car.lights.forEach((light) => {
               light.scale.setScalar(3 * light.intensity);
               light.updateMatrixWorld();
               carLightDatas.push(light);
               carLightPositions.push(light.position); // now their indexes match
-            })
+            });
           }
         }
       });

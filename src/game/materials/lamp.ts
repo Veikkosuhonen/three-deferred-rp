@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { flicker } from "../shaders/lib/flicker";
+import player from "../timeline";
 
 const lampShaderFS = /* glsl */ `
 precision highp float;
@@ -24,7 +25,7 @@ in vec3 vEmissive;
 // uniform vec3 emissive;
 
 void main() {
- 
+
   vec3 diffuse = vColor;
   vec3 emissive0 = vEmissive;
 
@@ -158,5 +159,5 @@ export const lampMaterial = new THREE.ShaderMaterial({
 });
 
 lampMaterial.onBeforeRender = (renderer, scene, camera, geometry, group) => {
-  lampMaterial.uniforms.u_time.value = performance.now() / 1000;
-}
+  lampMaterial.uniforms.u_time.value = player.currentTime;
+};

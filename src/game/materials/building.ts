@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { flicker } from "../shaders/lib/flicker";
+import player from "../timeline";
 
 const buildingShaderFS = /* glsl */ `
 precision highp float;
@@ -172,6 +173,12 @@ export const buildingMaterial = new THREE.ShaderMaterial({
   },
 });
 
-buildingMaterial.onBeforeRender = (renderer, scene, camera, geometry, group) => {
-  buildingMaterial.uniforms.u_time.value = performance.now() / 1000;
-}
+buildingMaterial.onBeforeRender = (
+  renderer,
+  scene,
+  camera,
+  geometry,
+  group,
+) => {
+  buildingMaterial.uniforms.u_time.value = player.currentTime;
+};
