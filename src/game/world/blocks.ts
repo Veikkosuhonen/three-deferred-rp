@@ -21,8 +21,8 @@ export interface Entity {
 }
 
 export const grid = {
-  width: 1000,
-  height: 1000,
+  width: 2000,
+  height: 2000,
 
   generate(): GeneratorResult {
     console.time("generate");
@@ -32,7 +32,7 @@ export const grid = {
     const entities: Entity[] = [];
 
     // Ground
-    const ground = new THREE.Mesh(
+    /*const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(this.width * 100, this.height * 100),
       new THREE.MeshPhysicalMaterial(),
     );
@@ -40,7 +40,7 @@ export const grid = {
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(this.width / 2, -4, this.height / 2);
     ground.frustumCulled = false;
-    group.add(ground);
+    group.add(ground);*/
 
     // Highways
     const highways = [

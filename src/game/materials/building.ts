@@ -25,6 +25,8 @@ uniform float u_time;
 
 ${flicker}
 
+uniform sampler2D uiTexture;
+
 void main() {
   vec3 diffuse = vColor;
 
@@ -36,9 +38,18 @@ void main() {
 
   float floorN = floor(vPositionWS.y * 0.666 + 0.2);
   float isWindowRow = mod(floorN, 2.0);
-  float isWindow = isWall * isWindowRow;
 
-  float windowId = floor(vPositionWS.x + vPositionWS.z);
+  float windowXY = vPositionWS.x + vPositionWS.z;
+  float windowId = floor(windowXY);
+  float windowSeed = sin(10.0 * windowId + 10.0 * floorN);
+  float isWindowCol = step(0.3, mod(windowXY, 2.0));
+
+  // Sometimes long vertical window
+  float vertical = step(35.0, mod(windowId, 40.0));
+  isWindowRow = min(1.0, isWindowRow + vertical);
+  // Taller window segments on vertical section
+  floorN = vertical > 0.0 ? floor(floorN / 4.0) : floorN;
+
   float windowCheckers = mod(sin(floorN * 20.0) * windowId, 10.0);
   windowCheckers *= step(windowCheckers, 1.0)
     + step(4.0, windowCheckers) * step(windowCheckers, 5.0)
@@ -48,11 +59,12 @@ void main() {
 
   float flicker = flicker(vec4(vec3(floorN, windowId, 1.0), u_time));
 
+  float isWindow = isWall * isWindowRow * isWindowCol;
   float isLitWindow = isWindow * windowCheckers * flicker;
 
   float roughness = 1.0 - isWindow * 0.9;
   float metallic = 0.0;
-  vec3 emissive = vec3(1.0, 0.75, 0.25);
+  vec3 emissive = step(fract(windowSeed), 0.95) > 0.0 ? vec3(1.0, 0.75, 0.25) : vec3(0.9, 0.4, 0.9) * 2.0;
   float emissiveIntensity = isLitWindow;
 
   vec3 orm = vec3(1.0, roughness, metallic);
@@ -137,6 +149,7 @@ export const buildingMaterial = new THREE.ShaderMaterial({
     previousWorldMatrix: { value: new THREE.Matrix4() },
     previousViewMatrix: { value: new THREE.Matrix4() },
     u_time: { value: 0.0 },
+    uiTexture: { value: null },
   },
   defines: {
     USE_INSTANCING: "",

@@ -6,20 +6,21 @@ import { carLightPositions } from "./world/Car";
 
 export class Game {
   renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  lights: THREE.Scene;
+  scene: THREE.Scene = new THREE.Scene();
+  lights: THREE.Scene = new THREE.Scene();
+  texts: THREE.Scene = new THREE.Scene();
   entities: Entity[] = [];
   mainCamera: THREE.PerspectiveCamera
+  uiCamera: THREE.OrthographicCamera;
   sheet: ISheet;
   loadingManager: THREE.LoadingManager;
 
   constructor(renderer: THREE.WebGLRenderer, mainCamera: THREE.PerspectiveCamera, sheet: ISheet, loadingManager: THREE.LoadingManager) {
     this.renderer = renderer
-    this.scene = new THREE.Scene();
-    this.lights = new THREE.Scene();
     this.mainCamera = mainCamera
     this.sheet = sheet;
     this.loadingManager = loadingManager
+    this.uiCamera = new THREE.OrthographicCamera()
   }
 
   update(deltaTime: number) {

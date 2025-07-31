@@ -19,6 +19,7 @@
     "@theatre/core": "^0.7.2",
     "@theatre/studio": "^0.7.2",
     "three": "^0.169.0",
+    "troika-three-text": "^0.52.4",
     "vite-plugin-top-level-await": "^1.4.4",
     "vite-plugin-wasm": "^3.3.0"
   },

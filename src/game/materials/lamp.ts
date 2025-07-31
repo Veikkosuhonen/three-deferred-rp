@@ -78,6 +78,7 @@ out vec3 vEmissive;
 
 ${flicker}
 
+uniform sampler2D uiTexture;
 uniform float u_time;
 
 void main() {
@@ -85,7 +86,9 @@ void main() {
   mat4 mvMatrix = viewMatrix * mMatrix;
 
   vec3 lightPositionWS = (mMatrix * vec4(0.0, 0.0, 0.0, 1.0) ).xyz;
-  vec3 lightPositionVS = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  vec4 lightPositionVS4 = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0));
+  vec3 lightPositionVS = lightPositionVS4.xyz;
+  vec4 lightPositionCS = projectionMatrix * lightPositionVS4;
 
   vec4 normalWS = mMatrix * vec4(normal, 0.0);
   vNormalWS = normalWS.xyz;
@@ -111,6 +114,10 @@ void main() {
   float flicker = 1.0 - flicker(vec4(lightPositionWS, u_time)) * flickerIntensity;
   vEmissive = emissive * flicker;
 
+  vec2 uv = lightPositionCS.xy / lightPositionCS.w * 0.5 + 0.5; // Convert to UV coordinates
+  vec4 uiTexel = texture(uiTexture, uv);
+  vEmissive *= uiTexel.r;
+
   vPositionCS = gl_Position;
 }
 `;
@@ -123,6 +130,7 @@ export const lampMaterial = new THREE.ShaderMaterial({
     previousWorldMatrix: { value: new THREE.Matrix4() },
     previousViewMatrix: { value: new THREE.Matrix4() },
     u_time: { value: 0.0 },
+    uiTexture: { value: null },
   },
   defines: {
     USE_INSTANCING: "",

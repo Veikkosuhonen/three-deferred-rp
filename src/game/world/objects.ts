@@ -45,6 +45,31 @@ export const lampPost = () => {
   return b;
 };
 
+export const redLamp = () => {
+  const b = baseObject();
+  const pole = cylinderInstance();
+  pole.scale.set(0.1, 5.0, 0.1);
+  pole.position.add({ x: 0.0, y: 2.5, z: 0.0 });
+
+  const color = 0xff0000;
+
+  const lamp = sphereInstance();
+  lamp.material.emissive.setHex(color).multiplyScalar(1);
+  lamp.material.flickerIntensity = 1.0;
+  lamp.material.customShader = lampMaterial
+  lamp.scale.setScalar(0.3);
+  lamp.position.add({ x: 0, y: 5.0, z: 0.0 });
+  b.add(lamp);
+
+  const light = new THREE.PointLight(color, 20.0);
+  light.userData.flickerIntensity = lamp.material.flickerIntensity;
+  lamp.add(light);
+
+  b.add(pole);
+
+  return b;
+}
+
 export const boxInstance = () => {
   const b = baseObject();
   b.userData.box = true;

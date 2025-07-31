@@ -3,12 +3,14 @@ import {
   boxInstance,
   cylinderInstance,
   lampPost,
+  redLamp,
   SceneObject,
 } from "./objects";
 import { rectangleSDF } from "./utils";
 import { HighwayPoint } from "./highway";
 import {
   BUILDING_SIZE,
+  FLOOR_HEIGHT,
   HIGHWAY_WIDTH,
   LAMPPOST_INTERVAL,
   SIDEWALK_WIDTH_PER_LANE,
@@ -141,11 +143,11 @@ export class CityBlock {
         building.material.customShader = buildingMaterial;
         building.material.color.multiplyScalar(0.3 + 0.6 * Math.random());
 
-        const floorHeight = 3;
         const height =
-          1 + floorHeight * (3 + Math.round(2 * roadLanes * Math.random()));
+          1 + FLOOR_HEIGHT * (3 + Math.round(2 * roadLanes * Math.random()));
         building.position.set(center.x, height / 2, center.y);
         building.scale.set(offsetW, height, offsetH);
+        building.userData.roofHeight = height;
         buildingsGrid[i][j] = building;
       }
     }
@@ -224,10 +226,11 @@ export class CityBlock {
           upperHeight,
           b.scale.z * (Math.random() * 0.5 + 0.5),
         );
+        upper.userData.roofHeight = upperHeight + b.userData.roofHeight;
         buildings.push(upper);
 
         // Building with upper section can get a spire
-        if (Math.random() > 0.8) {
+        if (Math.random() > 0.5 && upper.userData.roofHeight > 15 * FLOOR_HEIGHT) {
           const spire = cylinderInstance();
           const spireHeight = upperHeight / 2;
           spire.material.color.set(0xaaaaaa);
@@ -237,9 +240,31 @@ export class CityBlock {
             upper.position.z,
           );
           spire.scale.set(0.5, spireHeight, 0.5);
+          const lamp = redLamp()
+          lamp.position.copy(spire.position)
+          lamp.position.y += spireHeight / 2;
+          buildings.push(lamp)
           buildings.push(spire);
         }
+
+        if (upper.userData.roofHeight > 10 * FLOOR_HEIGHT) {
+          // add red lamps to corners
+          const corners = [
+            upper.position.clone().add(new THREE.Vector3(-upper.scale.x * 0.9 / 2, upper.scale.y / 2,  upper.scale.z * 0.9 / 2)),
+            upper.position.clone().add(new THREE.Vector3(-upper.scale.x * 0.9 / 2, upper.scale.y / 2, -upper.scale.z * 0.9 / 2)),
+            upper.position.clone().add(new THREE.Vector3( upper.scale.x * 0.9 / 2, upper.scale.y / 2,  upper.scale.z * 0.9 / 2)),
+            upper.position.clone().add(new THREE.Vector3( upper.scale.x * 0.9 / 2, upper.scale.y / 2, -upper.scale.z * 0.9 / 2)),
+          ]
+          corners.forEach((corner) => {
+            const lamp = redLamp();
+            lamp.position.copy(corner);
+            lamp.scale.setScalar(0.5);
+            buildings.push(lamp);
+          });
+        }
       }
+
+     
     }
 
     // Fill in empty slots with lamp posts

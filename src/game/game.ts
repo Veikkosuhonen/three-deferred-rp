@@ -9,6 +9,7 @@ import { Game } from './gameState';
 import theatreProject from "./demo project.theatre-project-state.json";
 import { setupPipeline } from './pipeline';
 import { Profiler } from './profiler';
+import { setupUI } from './ui';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
@@ -24,6 +25,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const game = new Game(renderer, camera, sheet, loadingManager);
 
   setupScene(game)
+  setupUI(game)
 
   const stats = setupStats();
 

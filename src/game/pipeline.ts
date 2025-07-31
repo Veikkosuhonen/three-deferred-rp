@@ -27,11 +27,17 @@ import { Game } from "./gameState";
 import { DebugPass } from "./renderPasses/DebugPass";
 import { FogPass } from "./renderPasses/FogPass";
 import { MotionBlurPass } from "./renderPasses/MotionBlurPass";
+import { TextPass } from "./renderPasses/TextPass";
+import { buildingMaterial } from "./materials/building";
+import { lightningShader } from "./shaders";
+import { lampMaterial } from "./materials/lamp";
+import { lightningShaderInstanced } from "./shaders/lighting";
 
 export const setupPipeline = async (game: Game) => {
   const depthStencilTexture = setupDepthStencilTexture();
   const gBuffer = setupGBuffer(depthStencilTexture);
   const lightBuffer = setupLightBuffer(depthStencilTexture);
+  const textBuffer = setupTextBuffer();
   const equirect = await loadEquirect(game);
   const cubeMap = equirectToCube(game.renderer, equirect, 1024);
   const irradianceMap = cubeToIrradiance(game.renderer, cubeMap.texture, 256);
@@ -41,6 +47,8 @@ export const setupPipeline = async (game: Game) => {
   const composer = setupComposer(game.renderer, depthStencilTexture);
 
   const savePass = new SavePass(gBuffer.width, gBuffer.height);
+
+  composer.addPass(new TextPass(game.texts, game.uiCamera, textBuffer))
 
   composer.addPass(new GBufferPass(game.scene, game.mainCamera, gBuffer));
 
@@ -91,7 +99,7 @@ export const setupPipeline = async (game: Game) => {
 
   // const bloomPass = new BloomPass(0.1, 0.005);
   // composer.addPass(bloomPass);
-  // composer.addPass(new DebugPass(lightBuffer.textures[0]));
+  // composer.addPass(new DebugPass(textBuffer.texture));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
   composer.passes.forEach((pass) =>
@@ -162,6 +170,26 @@ const setupLightBuffer = (depthTexture: THREE.DepthTexture) => {
   );
 
   return lightBuffer;
+};
+
+const setupTextBuffer = () => {
+  const textBuffer = new THREE.WebGLRenderTarget(
+    window.innerWidth,
+    window.innerHeight,
+    {
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+      count: 1,
+    },
+  );
+
+  buildingMaterial.uniforms.uiTexture.value = textBuffer.texture;
+  lightningShaderInstanced.uniforms.uiTexture.value = textBuffer.texture;
+  lampMaterial.uniforms.uiTexture.value = textBuffer.texture;
+
+  return textBuffer;
 };
 
 const setupComposer = (
