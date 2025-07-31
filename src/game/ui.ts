@@ -11,7 +11,7 @@ export const setupUI = (game: Game) => {
   myText.position.z = -1
   myText.position.x = -1
   myText.position.y = 0
-  myText.color = 0xffffff
+  myText.color = 0xf0ffff
 
   // Update the rendering:
   myText.sync()

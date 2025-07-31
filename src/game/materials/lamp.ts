@@ -165,7 +165,7 @@ export const lampMaterial = new THREE.ShaderMaterial({
 
 lampMaterial.onBeforeRender = (renderer, scene, camera, geometry, group) => {
   const t = player.currentTime;
-  const bpm = 160;
+  const bpm = player.bpm;
   const bps = bpm / 60;
   const beat = Math.floor(2 * t * bps);
   lampMaterial.uniforms.u_time.value = beat;

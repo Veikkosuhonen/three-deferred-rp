@@ -21,8 +21,8 @@ export interface Entity {
 }
 
 export const grid = {
-  width: 1000,
-  height: 1000,
+  width: 2000,
+  height: 2000,
 
   generate(): GeneratorResult {
     console.time("generate");

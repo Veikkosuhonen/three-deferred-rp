@@ -10,6 +10,8 @@ import theatreProject from "./demo project.theatre-project-state.json";
 import { setupPipeline } from './pipeline';
 import { Profiler } from './profiler';
 import { setupUI } from './ui';
+import { makeMatrixAnim, makeVectorAnim, setLookAtFromAnims, setMatrixFromAnim, timeline } from './timeline';
+import { buildingMaterial } from './materials/building';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
@@ -23,6 +25,9 @@ export const start = async (canvas: HTMLCanvasElement) => {
   const renderer = setupRenderer(canvas);
   const camera = setupCamera();
   const game = new Game(renderer, camera, sheet, loadingManager);
+
+  const cameraPAnim = makeVectorAnim([timeline.START_POS, timeline.END_POS], [0, 10]);
+  const cameraTAnim = makeVectorAnim([timeline.START_TARGET, timeline.END_TARGET], [0, 10]);
 
   setupScene(game)
   setupUI(game)
@@ -40,7 +45,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
     Profiler.start('frame')
     stats.begin();
 
-    // controls.update(clock.getDelta() * 20.0);
+    setLookAtFromAnims(cameraPAnim, cameraTAnim, game.mainCamera);
     
     pipeline.render();
     // debugLines.updateFromBuffer(game.world.debugRender())

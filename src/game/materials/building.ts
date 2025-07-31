@@ -21,6 +21,7 @@ in vec3 vColor;
 
 uniform float u_time;
 uniform mat4 textProjectionMatrix;
+uniform mat4 projectionMatrix;
 uniform mat4 textViewMatrix;
 
 ${flicker}
@@ -52,11 +53,11 @@ void main() {
   // Taller window segments on vertical section
   floorN = vertical > 0.0 ? floor(floorN / 4.0) : floorN;
 
-  mat4 vpMatrix = textProjectionMatrix * textViewMatrix;
+  mat4 vpMatrix = projectionMatrix * textViewMatrix;
   vec4 lightPositionCS = vpMatrix * vec4(windowCornerPosition, 1.0);
   vec2 uv = lightPositionCS.xy / lightPositionCS.w * 0.5 + 0.5; // Convert to UV coordinates
   vec4 uiTexel = texture(uiTexture, uv);
-  float flickerFraction = 0.1 + uiTexel.r * 0.5;
+  float flickerFraction = uiTexel.r;
   float flicker = flicker(vec4(vec3(floorN, windowId, 1.0), u_time), flickerFraction);
 
   float isWindow = isWall * isWindowRow * isWindowCol;
@@ -177,7 +178,7 @@ export const buildingMaterial = new THREE.ShaderMaterial({
 
 buildingMaterial.onBeforeRender = (renderer, scene, camera, geometry, group) => {
   const t = player.currentTime;
-  const bpm = 160;
+  const bpm = player.bpm;
   const bps = bpm / 60;
   const beat = Math.floor(2 * t * bps);
   buildingMaterial.uniforms.u_time.value = beat;

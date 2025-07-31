@@ -3,7 +3,6 @@ import { PassProps, RenderPass } from "./RenderPass";
 import { lightningShader } from "../shaders";
 import { lightningShaderInstanced } from "../shaders/lighting";
 import player from "../timeline";
-import { syncTextShaderUniforms } from "../textCamera";
 
 export class LightPass extends RenderPass {
   lightScene: THREE.Scene;
@@ -51,12 +50,10 @@ export class LightPass extends RenderPass {
     renderer.clear(true, true, false);
 
     const t =  player.currentTime
-    const bpm = 160;
+    const bpm = player.bpm;
     const bps = bpm / 60;
     const beat = Math.floor(2 * t * bps);
     lightningShaderInstanced.uniforms.u_time.value = beat;
-
-    syncTextShaderUniforms(this.textCamera, lightningShaderInstanced);
 
     renderer.render(this.lightScene, this.camera);
   }

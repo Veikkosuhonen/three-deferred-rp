@@ -19,7 +19,7 @@ export class TextPass extends RenderPass {
   pass({ renderer }: PassProps) {
     renderer.setRenderTarget(this.textBuffer);
     
-    renderer.setClearColor(0x1fffff, 1.0);
+    renderer.setClearColor(0x0fffff, 1.0);
     renderer.clear(true, true, true);
     renderer.setClearColor(0x000000, 0.0);
 
