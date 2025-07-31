@@ -20,9 +20,8 @@ in vec3 vNormalWS;
 in vec3 vColor;
 
 uniform float u_time;
-
-// uniform float emissiveIntensity;
-// uniform vec3 emissive;
+uniform mat4 textProjectionMatrix;
+uniform mat4 textViewMatrix;
 
 ${flicker}
 
@@ -41,9 +40,11 @@ void main() {
   float isWindowRow = mod(floorN, 2.0);
 
   float windowXY = vPositionWS.x + vPositionWS.z;
-  float windowId = floor(windowXY);
+  vec3 windowCornerPosition = floor(vec3(vPositionWS.x, floorN, vPositionWS.z));
+  float windowId = floor(windowXY + 100.0 * floorN);
   float windowSeed = sin(10.0 * windowId + 10.0 * floorN);
-  float isWindowCol = step(0.3, mod(windowXY, 2.0));
+  float isWindowCol = step(0.3, mod(windowXY, 1.0));
+
 
   // Sometimes long vertical window
   float vertical = step(35.0, mod(windowId, 40.0));
@@ -51,22 +52,21 @@ void main() {
   // Taller window segments on vertical section
   floorN = vertical > 0.0 ? floor(floorN / 4.0) : floorN;
 
-  float windowCheckers = mod(sin(floorN * 20.0) * windowId, 10.0);
-  windowCheckers *= step(windowCheckers, 1.0)
-    + step(4.0, windowCheckers) * step(windowCheckers, 5.0)
-    + step(5.0, windowCheckers) * step(windowCheckers, 10.0) * step(floorN, 2.0);
-  windowCheckers = mod(windowCheckers, 4.0);
-  // windowCheckers *= 0.6;
-
-  float flicker = flicker(vec4(vec3(floorN, windowId, 1.0), u_time));
+  mat4 vpMatrix = textProjectionMatrix * textViewMatrix;
+  vec4 lightPositionCS = vpMatrix * vec4(windowCornerPosition, 1.0);
+  vec2 uv = lightPositionCS.xy / lightPositionCS.w * 0.5 + 0.5; // Convert to UV coordinates
+  vec4 uiTexel = texture(uiTexture, uv);
+  float flickerFraction = 0.1 + uiTexel.r * 0.5;
+  float flicker = flicker(vec4(vec3(floorN, windowId, 1.0), u_time), flickerFraction);
 
   float isWindow = isWall * isWindowRow * isWindowCol;
-  float isLitWindow = isWindow * windowCheckers * flicker;
 
+  float isLit = flicker * step(0.0, mod(windowId, 5.0));
+ 
   float roughness = 1.0 - isWindow * 0.9;
   float metallic = 0.0;
   vec3 emissive = step(fract(windowSeed), 0.95) > 0.0 ? vec3(1.0, 0.75, 0.25) : vec3(0.9, 0.4, 0.9) * 2.0;
-  float emissiveIntensity = isLitWindow;
+  float emissiveIntensity = isWindow * isLit;
 
   vec3 orm = vec3(1.0, roughness, metallic);
 
@@ -151,6 +151,8 @@ export const buildingMaterial = new THREE.ShaderMaterial({
     previousViewMatrix: { value: new THREE.Matrix4() },
     u_time: { value: 0.0 },
     uiTexture: { value: null },
+    textProjectionMatrix: { value: new THREE.Matrix4() },
+    textViewMatrix: { value: new THREE.Matrix4() },
   },
   defines: {
     USE_INSTANCING: "",
@@ -173,12 +175,10 @@ export const buildingMaterial = new THREE.ShaderMaterial({
   },
 });
 
-buildingMaterial.onBeforeRender = (
-  renderer,
-  scene,
-  camera,
-  geometry,
-  group,
-) => {
-  buildingMaterial.uniforms.u_time.value = player.currentTime;
-};
+buildingMaterial.onBeforeRender = (renderer, scene, camera, geometry, group) => {
+  const t = player.currentTime;
+  const bpm = 160;
+  const bps = bpm / 60;
+  const beat = Math.floor(2 * t * bps);
+  buildingMaterial.uniforms.u_time.value = beat;
+}

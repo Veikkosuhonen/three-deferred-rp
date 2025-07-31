@@ -35,6 +35,9 @@ out vec3 vColor;
 
 uniform float u_time;
 
+uniform mat4 textProjectionMatrix;
+uniform mat4 textViewMatrix;
+
 ${flicker}
 
 uniform sampler2D uiTexture;
@@ -43,16 +46,17 @@ void main() {
   mat4 mMatrix = modelMatrix * instanceMatrix;
   mat4 mvMatrix = viewMatrix * mMatrix;
 
-  vec3 lightPositionWS = (mMatrix * vec4(0.0, 0.0, 0.0, 1.0) ).xyz;
+  vec4 lightPositionWS = (mMatrix * vec4(0.0, 0.0, 0.0, 1.0) );
   vec4 lightPositionVS4 = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0));
   lightPositionVS = lightPositionVS4.xyz;
-  vec4 lightPositionCS = projectionMatrix *lightPositionVS4;
 
-  float flicker = 1.0 - flicker(vec4(lightPositionWS, u_time)) * flickerIntensity;
-
+  vec4 lightPositionCS = textProjectionMatrix * textViewMatrix * lightPositionWS;
   vec2 uv = lightPositionCS.xy / lightPositionCS.w * 0.5 + 0.5; // Convert to UV coordinates
   vec4 uiTexel = texture(uiTexture, uv);
-  flicker *= uiTexel.r;
+  float flickerFraction = 0.1 + uiTexel.r * 0.5;
+  
+  float flicker = flicker(vec4(lightPositionWS.xyz, u_time), flickerFraction) * flickerIntensity;
+
   vColor = color * intensity * flicker;
 
   gl_Position = projectionMatrix * mvMatrix * vec4(position, 1.0);
@@ -214,7 +218,7 @@ export const lightningShaderInstanced = new THREE.ShaderMaterial({
     lightColor: { value: new THREE.Color() },
     u_time: { value: 0 },
     uiTexture: { value: null },
-    //modelViewMatrix: { value: new THREE.Matrix4() },
-    //projectionMatrix: { value: new THREE.Matrix4() },
+    textProjectionMatrix: { value: new THREE.Matrix4() },
+    textViewMatrix: { value: new THREE.Matrix4() },
   },
 });

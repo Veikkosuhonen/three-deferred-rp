@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { flicker } from "../shaders/lib/flicker";
 import player from "../timeline";
+import { syncTextShaderUniforms } from "../textCamera";
+import { Game } from "../gameState";
 
 const lampShaderFS = /* glsl */ `
 precision highp float;
@@ -66,6 +68,9 @@ in float flickerIntensity;
 uniform mat4 previousWorldMatrix;
 uniform mat4 previousViewMatrix;
 
+uniform mat4 textProjectionMatrix;
+uniform mat4 textViewMatrix;
+
 out vec3 vPositionOS;
 out vec3 vPosition;
 out vec3 vPositionWS;
@@ -86,10 +91,8 @@ void main() {
   mat4 mMatrix = modelMatrix * instanceMatrix;
   mat4 mvMatrix = viewMatrix * mMatrix;
 
-  vec3 lightPositionWS = (mMatrix * vec4(0.0, 0.0, 0.0, 1.0) ).xyz;
-  vec4 lightPositionVS4 = (mvMatrix * vec4(0.0, 0.0, 0.0, 1.0));
-  vec3 lightPositionVS = lightPositionVS4.xyz;
-  vec4 lightPositionCS = projectionMatrix * lightPositionVS4;
+  vec4 lightPositionWS = (mMatrix * vec4(0.0, 0.0, 0.0, 1.0) );
+  vec4 lightPositionCS = textProjectionMatrix * textViewMatrix * lightPositionWS;
 
   vec4 normalWS = mMatrix * vec4(normal, 0.0);
   vNormalWS = normalWS.xyz;
@@ -112,12 +115,12 @@ void main() {
 
   vColor = color;
 
-  float flicker = 1.0 - flicker(vec4(lightPositionWS, u_time)) * flickerIntensity;
-  vEmissive = emissive * flicker;
-
   vec2 uv = lightPositionCS.xy / lightPositionCS.w * 0.5 + 0.5; // Convert to UV coordinates
   vec4 uiTexel = texture(uiTexture, uv);
-  vEmissive *= uiTexel.r;
+  float flickerFraction = 0.1 + uiTexel.r * 0.5;
+
+  float flicker = flicker(vec4(lightPositionWS.xyz, u_time), flickerFraction);
+  vEmissive = emissive * flicker;
 
   vPositionCS = gl_Position;
 }
@@ -132,6 +135,8 @@ export const lampMaterial = new THREE.ShaderMaterial({
     previousViewMatrix: { value: new THREE.Matrix4() },
     u_time: { value: 0.0 },
     uiTexture: { value: null },
+    textProjectionMatrix: { value: new THREE.Matrix4() },
+    textViewMatrix: { value: new THREE.Matrix4() },
   },
   defines: {
     USE_INSTANCING: "",
@@ -159,5 +164,9 @@ export const lampMaterial = new THREE.ShaderMaterial({
 });
 
 lampMaterial.onBeforeRender = (renderer, scene, camera, geometry, group) => {
-  lampMaterial.uniforms.u_time.value = player.currentTime;
-};
+  const t = player.currentTime;
+  const bpm = 160;
+  const bps = bpm / 60;
+  const beat = Math.floor(2 * t * bps);
+  lampMaterial.uniforms.u_time.value = beat;
+}

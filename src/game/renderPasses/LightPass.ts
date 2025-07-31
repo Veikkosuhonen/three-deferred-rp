@@ -3,16 +3,19 @@ import { PassProps, RenderPass } from "./RenderPass";
 import { lightningShader } from "../shaders";
 import { lightningShaderInstanced } from "../shaders/lighting";
 import player from "../timeline";
+import { syncTextShaderUniforms } from "../textCamera";
 
 export class LightPass extends RenderPass {
   lightScene: THREE.Scene;
   camera: THREE.Camera;
+  textCamera: THREE.PerspectiveCamera
   gBuffer: THREE.WebGLRenderTarget;
   lightBuffer: THREE.WebGLRenderTarget;
 
   constructor(
     lightScene: THREE.Scene,
     camera: THREE.Camera,
+    textCamera: THREE.PerspectiveCamera,
     gBuffer: THREE.WebGLRenderTarget,
     lightBuffer: THREE.WebGLRenderTarget,
   ) {
@@ -20,6 +23,7 @@ export class LightPass extends RenderPass {
     this.needsSwap = false;
     this.lightScene = lightScene;
     this.camera = camera;
+    this.textCamera = textCamera;
     this.gBuffer = gBuffer;
     this.lightBuffer = lightBuffer;
 
@@ -46,7 +50,13 @@ export class LightPass extends RenderPass {
     renderer.setRenderTarget(this.lightBuffer);
     renderer.clear(true, true, false);
 
-    lightningShaderInstanced.uniforms.u_time.value = player.currentTime;
+    const t =  player.currentTime
+    const bpm = 160;
+    const bps = bpm / 60;
+    const beat = Math.floor(2 * t * bps);
+    lightningShaderInstanced.uniforms.u_time.value = beat;
+
+    syncTextShaderUniforms(this.textCamera, lightningShaderInstanced);
 
     renderer.render(this.lightScene, this.camera);
   }

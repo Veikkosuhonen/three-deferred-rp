@@ -58,6 +58,7 @@ export const setupPipeline = async (game: Game) => {
   const lightingPass = new LightPass(
     game.lights,
     game.mainCamera,
+    game.textCamera,
     gBuffer,
     lightBuffer,
   );
@@ -97,8 +98,8 @@ export const setupPipeline = async (game: Game) => {
 
   composer.addPass(new BokehPass(gBuffer, game.mainCamera));
 
-  // const bloomPass = new BloomPass(0.1, 0.005);
-  // composer.addPass(bloomPass);
+  const bloomPass = new BloomPass(0.1, 0.005);
+  composer.addPass(bloomPass);
   // composer.addPass(new DebugPass(textBuffer.texture));
   composer.addPass(new ShaderPass(ACESFilmicToneMappingShader));
 
@@ -140,7 +141,7 @@ const setupGBuffer = (depthTexture: THREE.DepthTexture) => {
     window.innerHeight,
     {
       format: THREE.RGBAFormat,
-      type: THREE.FloatType,
+      type: THREE.HalfFloatType,
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
       count: 5,
@@ -159,7 +160,7 @@ const setupLightBuffer = (depthTexture: THREE.DepthTexture) => {
     window.innerHeight,
     {
       format: THREE.RGBAFormat,
-      type: THREE.FloatType,
+      type: THREE.HalfFloatType,
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
       count: 2,
@@ -178,7 +179,7 @@ const setupTextBuffer = () => {
     window.innerHeight,
     {
       format: THREE.RGBAFormat,
-      type: THREE.FloatType,
+      type: THREE.HalfFloatType,
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
       count: 1,
@@ -203,7 +204,7 @@ const setupComposer = (
       stencilBuffer: true,
       depthBuffer: true,
       depthTexture: depthStencilTexture,
-      type: THREE.FloatType,
+      type: THREE.HalfFloatType,
     },
   );
   const composer = new EffectComposer(renderer, rt);

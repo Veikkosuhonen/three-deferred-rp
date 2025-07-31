@@ -31,7 +31,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   // const debugLines = createLines();
   const clock = new THREE.Clock();
-  const controls = setupControls(game.mainCamera, renderer);
+  // const controls = setupControls(game.mainCamera, renderer);
 
   const pipeline = await setupPipeline(game)
 
@@ -40,7 +40,7 @@ export const start = async (canvas: HTMLCanvasElement) => {
     Profiler.start('frame')
     stats.begin();
 
-    controls.update(clock.getDelta() * 20.0);
+    // controls.update(clock.getDelta() * 20.0);
     
     pipeline.render();
     // debugLines.updateFromBuffer(game.world.debugRender())

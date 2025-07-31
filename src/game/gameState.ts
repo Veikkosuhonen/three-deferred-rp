@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { Entity } from "./world/blocks";
 import { MATRIX } from "./math";
 import { carLightPositions } from "./world/Car";
+import { setupTextCamera } from "./textCamera";
 
 export class Game {
   renderer: THREE.WebGLRenderer;
@@ -10,7 +11,8 @@ export class Game {
   lights: THREE.Scene = new THREE.Scene();
   texts: THREE.Scene = new THREE.Scene();
   entities: Entity[] = [];
-  mainCamera: THREE.PerspectiveCamera
+  mainCamera: THREE.PerspectiveCamera;
+  textCamera: THREE.PerspectiveCamera;
   uiCamera: THREE.OrthographicCamera;
   sheet: ISheet;
   loadingManager: THREE.LoadingManager;
@@ -18,6 +20,7 @@ export class Game {
   constructor(renderer: THREE.WebGLRenderer, mainCamera: THREE.PerspectiveCamera, sheet: ISheet, loadingManager: THREE.LoadingManager) {
     this.renderer = renderer
     this.mainCamera = mainCamera
+    this.textCamera = setupTextCamera(mainCamera);
     this.sheet = sheet;
     this.loadingManager = loadingManager
     this.uiCamera = new THREE.OrthographicCamera()
