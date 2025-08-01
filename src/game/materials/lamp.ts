@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { flicker } from "../shaders/lib/flicker";
-import player from "../timeline";
+import player from "../../timeline";
 import { syncTextShaderUniforms } from "../textCamera";
 import { Game } from "../gameState";
 
@@ -117,7 +117,7 @@ void main() {
 
   vec2 uv = lightPositionCS.xy / lightPositionCS.w * 0.5 + 0.5; // Convert to UV coordinates
   vec4 uiTexel = texture(uiTexture, uv);
-  float flickerFraction = 0.1 + uiTexel.r * 0.5;
+  float flickerFraction = 0.5 + uiTexel.r * 0.5;
 
   float flicker = flicker(vec4(lightPositionWS.xyz, u_time), flickerFraction);
   vEmissive = emissive * flicker;

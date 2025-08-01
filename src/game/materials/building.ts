@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { flicker } from "../shaders/lib/flicker";
-import player from "../timeline";
+import player from "../../timeline";
 
 const buildingShaderFS = /* glsl */ `
 precision highp float;
@@ -66,7 +66,7 @@ void main() {
  
   float roughness = 1.0 - isWindow * 0.9;
   float metallic = 0.0;
-  vec3 emissive = step(fract(windowSeed), 0.95) > 0.0 ? vec3(1.0, 0.75, 0.25) : vec3(0.9, 0.4, 0.9) * 2.0;
+  vec3 emissive = step(fract(windowSeed), 0.95) > 0.0 ? vec3(1.0, 0.75, 0.25) : vec3(0.9, 0.4, 0.9) * 3.0;
   float emissiveIntensity = isWindow * isLit;
 
   vec3 orm = vec3(1.0, roughness, metallic);

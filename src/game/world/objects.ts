@@ -29,14 +29,14 @@ export const lampPost = () => {
   const color = rnd > 0.5 ? 0xffccaa : 0xffaa77;
 
   const lamp = sphereInstance();
-  lamp.material.emissive.setHex(color).multiplyScalar(15.0);
+  lamp.material.emissive.setHex(color).multiplyScalar(20.0);
   lamp.material.flickerIntensity = 1.0;
   lamp.material.customShader = lampMaterial
   lamp.scale.setScalar(0.4);
   lamp.position.add({ x: 0, y: 5.0, z: 0.0 });
   b.add(lamp);
 
-  const light = new THREE.PointLight(color, 30.0);
+  const light = new THREE.PointLight(color, 40.0);
   light.userData.flickerIntensity = lamp.material.flickerIntensity;
   lamp.add(light);
 
@@ -54,7 +54,7 @@ export const redLamp = () => {
   const color = 0xff0000;
 
   const lamp = sphereInstance();
-  lamp.material.emissive.setHex(color).multiplyScalar(1);
+  lamp.material.emissive.setHex(color).multiplyScalar(2);
   lamp.material.flickerIntensity = 1.0;
   lamp.material.customShader = lampMaterial
   lamp.scale.setScalar(0.3);

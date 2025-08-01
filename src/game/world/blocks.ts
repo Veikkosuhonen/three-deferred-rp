@@ -113,7 +113,7 @@ export const grid = {
       }
 
       if (obj instanceof THREE.PointLight && !obj.userData.dynamic) {
-        obj.scale.setScalar(3 * obj.intensity);
+        obj.scale.setScalar(4 * obj.intensity);
         obj.updateMatrixWorld();
 
         staticLightDatas.push(obj);

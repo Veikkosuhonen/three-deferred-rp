@@ -10,24 +10,23 @@ import theatreProject from "./demo project.theatre-project-state.json";
 import { setupPipeline } from './pipeline';
 import { Profiler } from './profiler';
 import { setupUI } from './ui';
-import { makeMatrixAnim, makeVectorAnim, setLookAtFromAnims, setMatrixFromAnim, timeline } from './timeline';
+import player, { getTimeLineTrack, makeMatrixAnim, makeVectorAnim, setLookAtFromAnims, setMatrixFromAnim, timeline, timelineValues } from '../timeline';
 import { buildingMaterial } from './materials/building';
 
 export const loadingManager = new THREE.LoadingManager();
 export let onLoaded: () => void;
 
 export const start = async (canvas: HTMLCanvasElement) => {
-  studio.initialize();
+  // studio.initialize();
   const project = getProject("demo project", { state: theatreProject });
   const sheet = project.sheet("demo sheet");
-  onLoaded = () => sheet.sequence.play({ iterationCount: Infinity, rate: 1.5 });
 
   const renderer = setupRenderer(canvas);
   const camera = setupCamera();
   const game = new Game(renderer, camera, sheet, loadingManager);
 
-  const cameraPAnim = makeVectorAnim([timeline.START_POS, timeline.END_POS], [0, 10]);
-  const cameraTAnim = makeVectorAnim([timeline.START_TARGET, timeline.END_TARGET], [0, 10]);
+  const cameraPAnim = makeVectorAnim(getTimeLineTrack("position"));
+  const cameraTAnim = makeVectorAnim(getTimeLineTrack("target"));
 
   setupScene(game)
   setupUI(game)
@@ -36,23 +35,54 @@ export const start = async (canvas: HTMLCanvasElement) => {
 
   // const debugLines = createLines();
   const clock = new THREE.Clock();
-  // const controls = setupControls(game.mainCamera, renderer);
+  const controls = setupControls(game.mainCamera, renderer);
 
   const pipeline = await setupPipeline(game)
 
+  let controlled = false;
+  // addEventListener('keydown', (event) => {
+  //   if (event.key === 'e') {
+  //     controlled = !controlled
+  //     if (controlled) {
+  //       const t = cameraTAnim.getValuesAt(player.currentTime)
+  //       controls.target.set(t.x, t.y, t.z)
+  //     }
+  //   }
+  // })
+  let once = true;
   const animate = () => {
-    Profiler.end('frame')
-    Profiler.start('frame')
-    stats.begin();
+    if (player.paused && once) {
+      player.seek(0)
+      player.play()
+      once = false;
+    }
+    // stats.begin();
 
-    setLookAtFromAnims(cameraPAnim, cameraTAnim, game.mainCamera);
-    
+    if (controlled) {
+      controls.update(clock.getDelta())
+    } else {
+      setLookAtFromAnims(cameraPAnim, cameraTAnim, game.mainCamera);
+    }
+
+    game.onRender();
     pipeline.render();
     // debugLines.updateFromBuffer(game.world.debugRender())
     // renderer.render(debugLines.lines, game.mainCamera);
     game.mainCamera.userData.previousViewMatrix.copy(game.mainCamera.matrixWorldInverse);
-    stats.end();
+    // stats.end();
   }
+
+  // play audio (./music.mp3)
+  const audio = new Audio('./sieni.mp3');
+  audio.loop = false;
+  audio.volume = 1.0;
+  audio.play().catch(err => {
+    console.error("Failed to play audio:", err);
+  });
+  player.addEventListener("seek", (p) => {
+    console.log(p)
+    audio.currentTime = player.currentTime;
+  })
 
   setInterval(() => {
     game.update(1 / 20);
@@ -73,7 +103,11 @@ export const start = async (canvas: HTMLCanvasElement) => {
   window.addEventListener('keydown', (event) => {
     // WHen press c, console.log camera position
     if (event.key === 'c') {
-      console.log(camera.position);
+      const str = `{\ntime: ${player.currentTime},\nposition: v3([${camera.position.x},${camera.position.y},${camera.position.z},]),\ntarget: v3([${controls.target.x},${controls.target.y},${controls.target.z},]) \n}`;
+      // console.log(str);
+      navigator.clipboard.writeText(str).then(() => {
+        console.log("Copied to clipboard:", str);
+      })
     }
   })
 }
@@ -106,7 +140,7 @@ const setupCamera = () => {
     Math.tan(fowY) / 2.0
   );
 
-  camera.position.add({x: 400, y: 50, z: 400})
+  camera.position.add(timelineValues.START_POS);
 
   camera.userData.previousViewMatrix = new THREE.Matrix4();
 
@@ -115,7 +149,7 @@ const setupCamera = () => {
 
 const setupControls = (camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) => {
   const controls = new MapControls(camera, renderer.domElement);
-  controls.target.set(500, 0, 500);
+  controls.target.copy(timelineValues.START_TARGET)
   // controls.autoRotate = true;
   // controls.autoRotateSpeed = 0.1;
   controls.enableDamping = true;
@@ -128,6 +162,6 @@ const setupStats = () => {
   const stats = new Stats();
   stats.dom.style.position = 'absolute';
   stats.dom.style.top = "90vh";
-  document.body.appendChild(stats.dom);
+  // document.body.appendChild(stats.dom);
   return stats;
 }

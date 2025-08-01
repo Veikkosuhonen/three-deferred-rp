@@ -17,6 +17,8 @@ export class Game {
   sheet: ISheet;
   loadingManager: THREE.LoadingManager;
 
+  onRenders: (() => void)[] = [];
+
   constructor(renderer: THREE.WebGLRenderer, mainCamera: THREE.PerspectiveCamera, sheet: ISheet, loadingManager: THREE.LoadingManager) {
     this.renderer = renderer
     this.mainCamera = mainCamera
@@ -43,5 +45,13 @@ export class Game {
       }
       attribute.needsUpdate = true;
     }
+  }
+
+  addRenderListener(callback: () => void) {
+    this.onRenders.push(callback);
+  }
+
+  onRender() {
+    this.onRenders.forEach(callback => callback());
   }
 }

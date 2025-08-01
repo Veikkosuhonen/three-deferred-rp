@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@dimforge/rapier3d": "^0.14.0",
+    "@tauri-apps/plugin-process": "~2",
     "@theatre/core": "^0.7.2",
     "@theatre/studio": "^0.7.2",
     "parameter-flow": "https://github.com/felixbade/parameter-flow.git",

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { PassProps, RenderPass } from "./RenderPass";
 import { lightningShader } from "../shaders";
 import { lightningShaderInstanced } from "../shaders/lighting";
-import player from "../timeline";
+import player from "../../timeline";
 
 export class LightPass extends RenderPass {
   lightScene: THREE.Scene;
