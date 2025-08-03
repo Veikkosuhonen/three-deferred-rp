@@ -1,21 +1,16 @@
-# Deferred rendering
+![grid-attack](https://github.com/user-attachments/assets/b7ac087a-27d6-4fb8-a9d6-fb93166f7a66)
 
-This allows for all kinds of cool effects to be composed
 
-So far got at least:
+# Grid Attack by ZyL
 
-- Deferred lighting
-- SSAO
-- Image-based lighting
-- SSR
-- Motion blur
-- Bokeh
-- Bloom
+First place at Assembly 2025 One Scene compo
 
-And like a procedural city thing
+## Building
 
-Maybe will make a demo with this
+Remember to clone recursively
 
-![out](https://github.com/user-attachments/assets/603ed4e6-ea42-403c-a799-0f476864619d)
-
-30 fps, not bad on an M1 Pro laptop
+```
+bun install
+bun tauri build
+```
+Build is somewhere in src-tauri/target/release
